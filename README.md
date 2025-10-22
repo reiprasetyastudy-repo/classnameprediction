@@ -50,12 +50,34 @@ Predict class name:
 Name:
 ```
 
+## Train Codegen
+
+```bash
+python scripts/train_codegen.py \
+  --model Salesforce/codegen-350M-mono \
+  --data datasets/python \
+  --output model/checkpoints/run1-python-codegen \
+  --batch-size 1 \
+  --grad-accum 8 \
+  --max-source-len 256 \
+  --gradient-checkpointing
+  --cpu
+```
+
 ## Evaluate
 
 Evaluate the Python model (adjust for Java):
 ```bash
 python scripts/eval.py \
   --ckpt model/checkpoints/run1-python \
+  --data datasets/python \
+  --k 5
+```
+
+## Evaluate CodeGen
+```bash
+python scripts/eval_codegen.py \
+  --ckpt model/checkpoints/run1-python-codegen \
   --data datasets/python \
   --k 5
 ```
@@ -97,6 +119,18 @@ cat path/to/Foo.java | python scripts/predict.py --ckpt model/checkpoints/run1-j
 Examples included:
 - `examples/wrong_name_lru_cache.py` — LRU cache with wrong class name.
 - `examples/wrong_name_image.py` — image container with wrong class name.
+
+## Predict CodeGen
+```bash
+python scripts/predict.py \
+  --ckpt model/checkpoints/run1-python \
+  --language python \
+  --file path/to/MyWrongClass.py \
+  --k 5 \
+  --mask-all \
+  --out path/to/MyClass_fixed.py \
+  --rename-all
+```
 
 ## GPU Selection and CUDA Devices
 
