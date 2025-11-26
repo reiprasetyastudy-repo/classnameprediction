@@ -66,12 +66,37 @@ python scripts/train_codegen.py \
 
 ## Evaluate
 
-Evaluate the Python model (adjust for Java):
+### Evaluate CodeT5+ (CPU - slower)
 ```bash
 python scripts/eval.py \
   --ckpt model/checkpoints/run1-python \
   --data datasets/python \
   --k 5
+```
+
+### Evaluate CodeT5+ with GPU (recommended - 10-20x faster)
+```bash
+python scripts/eval_gpu.py \
+  --ckpt model/checkpoints/run1-python \
+  --data datasets/python \
+  --k 5
+```
+
+**GPU Evaluation Options:**
+- `--cpu`: Force CPU usage even if GPU is available
+- `--batch-size N`: Custom batch size (default: 16 for GPU, 8 for CPU)
+
+**Performance comparison:**
+- CPU: ~60-80 minutes for 3256 samples (batch_size=8)
+- GPU: ~2-3 minutes for 3256 samples (batch_size=16)
+
+Example with custom settings:
+```bash
+python scripts/eval_gpu.py \
+  --ckpt model/checkpoints/run1-java \
+  --data datasets/java \
+  --k 5 \
+  --batch-size 32  # For high-end GPUs
 ```
 
 ## Evaluate CodeGen
