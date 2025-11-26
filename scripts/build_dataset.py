@@ -16,6 +16,7 @@ Optional:
 
 Outputs:
     - datasets/<language>/{train,valid,test}.jsonl with fields: language, repo, path, class_span?, source, target
+    - logs/build_dataset_YYYYMMDD_HHMMSS.log with detailed execution log
 
 Notes:
   - Clones into data/repos/<owner>__<repo>
@@ -26,11 +27,14 @@ import os
 import re
 import json
 import random
+import time
 from pathlib import Path
 from typing import Iterator, List, Dict, Tuple
 
 from git import Repo
 from tqdm import tqdm
+
+from logger_utils import setup_logger, log_section, log_config
 
 
 PY_CLASS_RE = re.compile(r"^class\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(?", re.MULTILINE)
@@ -160,6 +164,12 @@ def main():
     ap.add_argument('--test', type=float, default=0.1)
     args = ap.parse_args()
 
+    # Setup logger
+    logger = setup_logger('build_dataset')
+    start_time = time.time()
+
+    log_section(logger, "Building Dataset from GitHub Repositories")
+
     random.seed(args.seed)
 
     data_root = Path(args.in_dir)
@@ -170,18 +180,44 @@ def main():
     with open(args.repos_file, 'r', encoding='utf-8') as f:
         repo_urls = [line.strip() for line in f if line.strip() and not line.strip().startswith('#')]
 
+    # Log configuration
+    config = {
+        'repos_file': args.repos_file,
+        'num_repositories': len(repo_urls),
+        'languages': ', '.join(languages),
+        'output_dir': args.out_dir,
+        'mask': args.mask,
+        'min_lines': args.min_lines,
+        'seed': args.seed,
+        'train_ratio': args.train,
+        'valid_ratio': args.valid,
+        'test_ratio': args.test,
+    }
+    log_config(logger, config)
+
+    logger.info(f"Will clone {len(repo_urls)} repositories")
+    logger.info(f"Target languages: {', '.join(languages)}")
+
     lang_to_rows: Dict[str, List[Dict]] = {lang: [] for lang in languages}
+    clone_success = {lang: 0 for lang in languages}
+    clone_failed = {lang: 0 for lang in languages}
 
     for url in tqdm(repo_urls, desc='Cloning'):
         repo_name = safe_repo_dir(url)
+        logger.info(f"Processing repository: {repo_name} ({url})")
+
         # Clone once per language into language-specific dir to keep caches separate
         for lang in languages:
             try:
                 lang_repo_root = repos_root / lang
                 lang_repo_root.mkdir(parents=True, exist_ok=True)
                 repo_dir = clone_or_update(url, lang_repo_root)
+                clone_success[lang] += 1
+                logger.info(f"  [{lang}] Cloned successfully to {repo_dir}")
             except Exception as e:
                 print(f"Failed to clone {url} for {lang}: {e}")
+                logger.error(f"  [{lang}] Failed to clone: {e}")
+                clone_failed[lang] += 1
                 continue
 
             if lang == 'python':
@@ -190,6 +226,9 @@ def main():
                 exts = ('.java',)
             else:
                 continue
+
+            file_count = 0
+            class_count = 0
             for file_path in iter_files(repo_dir, exts):
                 src = read_text(file_path)
                 rows = build_examples(
@@ -202,9 +241,24 @@ def main():
                 )
                 if rows:
                     lang_to_rows[lang].extend(rows)
+                    file_count += 1
+                    class_count += len(rows)
+
+            if class_count > 0:
+                logger.info(f"  [{lang}] Extracted {class_count} classes from {file_count} files")
+
+    # Log cloning summary
+    log_section(logger, "Cloning Summary")
+    for lang in languages:
+        logger.info(f"[{lang}] Success: {clone_success[lang]}, Failed: {clone_failed[lang]}")
+        logger.info(f"[{lang}] Total examples extracted: {len(lang_to_rows[lang])}")
 
     # Write per-language splits
+    log_section(logger, "Creating Dataset Splits")
     for lang, examples in lang_to_rows.items():
+        logger.info(f"Processing {lang} dataset...")
+        logger.info(f"  Total examples before dedup: {len(examples)}")
+
         # Dedup within language
         uniq = {}
         for r in examples:
@@ -213,6 +267,8 @@ def main():
                 uniq[key] = r
         rows = list(uniq.values())
         random.shuffle(rows)
+
+        logger.info(f"  After deduplication: {len(rows)} examples")
 
         n = len(rows)
         n_train = int(n * args.train)
@@ -225,7 +281,17 @@ def main():
         write_jsonl(out_dir / 'train.jsonl', train_rows)
         write_jsonl(out_dir / 'valid.jsonl', valid_rows)
         write_jsonl(out_dir / 'test.jsonl', test_rows)
+
         print(f"[{lang}] Wrote: {len(train_rows)} train, {len(valid_rows)} valid, {len(test_rows)} test → {out_dir}")
+        logger.info(f"[{lang}] Created splits:")
+        logger.info(f"  Train: {len(train_rows)} examples → {out_dir / 'train.jsonl'}")
+        logger.info(f"  Valid: {len(valid_rows)} examples → {out_dir / 'valid.jsonl'}")
+        logger.info(f"  Test: {len(test_rows)} examples → {out_dir / 'test.jsonl'}")
+
+    elapsed_time = time.time() - start_time
+    log_section(logger, "Dataset Build Complete")
+    logger.info(f"Total time: {elapsed_time:.2f} seconds ({elapsed_time/60:.2f} minutes)")
+    logger.info(f"Output directory: {out_root}")
 
 
 if __name__ == '__main__':
