@@ -70,13 +70,13 @@ https://github.com/apache/jmeter
 https://github.com/testcontainers/testcontainers-java
 https://github.com/awaitility/awaitility
 https://github.com/wiremock/wiremock
-https://github.com/zaxxer/HikariCP
+https://github.com/brettwooldridge/HikariCP
 https://github.com/apache/commons-io
 https://github.com/apache/commons-collections
 https://github.com/apache/commons-codec
 https://github.com/apache/commons-csv
-https://github.com/commons-cli/commons-cli
-https://github.com/joda-time/joda-time
+https://github.com/apache/commons-cli
+https://github.com/JodaOrg/joda-time
 https://github.com/OpenFeign/feign
 https://github.com/Netflix/Hystrix
 https://github.com/Netflix/zuul
@@ -94,7 +94,7 @@ https://github.com/spring-projects/spring-integration
 https://github.com/hazelcast/hazelcast
 https://github.com/ehcache/ehcache3
 https://github.com/ben-manes/caffeine
-https://github.com/google/guava-testlib
-https://github.com/awslabs/aws-sdk-java-v2
+https://github.com/apache/commons-validator
+https://github.com/aws/aws-sdk-java-v2
 https://github.com/Azure/azure-sdk-for-java
 https://github.com/googleapis/google-cloud-java
