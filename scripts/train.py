@@ -36,6 +36,7 @@ if torch.cuda.is_available():
 
 from dataclasses import dataclass
 from typing import Dict, List
+import time
 import datasets as hfds
 from transformers import (
     AutoTokenizer,
@@ -44,6 +45,7 @@ from transformers import (
     Seq2SeqTrainer,
     Seq2SeqTrainingArguments,
 )
+from logger_utils import setup_logger, log_section, log_config
 
 
 PROMPT = "Predict class name:\n{source}\nName:"
@@ -97,20 +99,53 @@ def main():
     ap.add_argument('--cuda-device', type=int, default=0, help='CUDA device id (default: 0)')
     args = ap.parse_args()
 
+    # Setup logger
+    logger = setup_logger('train')
+    start_time = time.time()
+
+    log_section(logger, "CodeT5+ Training")
 
     hfds.logging.set_verbosity_info()
 
     # Set CUDA device if available
     if torch.cuda.is_available():
         torch.cuda.set_device(args.cuda_device)
+        logger.info(f"Using CUDA device: {args.cuda_device}")
+        logger.info(f"GPU: {torch.cuda.get_device_name(args.cuda_device)}")
+    else:
+        logger.info("CUDA not available, using CPU")
 
+    # Log configuration
+    config = {
+        'model': args.model,
+        'data': args.data,
+        'output': args.output,
+        'batch_size': args.batch_size,
+        'gradient_accumulation_steps': args.grad_accum,
+        'effective_batch_size': args.batch_size * args.grad_accum,
+        'learning_rate': args.lr,
+        'epochs': args.epochs,
+        'max_source_len': args.max_source_len,
+        'max_target_len': args.max_target_len,
+        'fp16': args.fp16,
+        'seed': args.seed,
+    }
+    log_config(logger, config)
+
+    logger.info("Loading tokenizer and model...")
     tokenizer = AutoTokenizer.from_pretrained(args.model, use_fast=False)
     model = AutoModelForSeq2SeqLM.from_pretrained(args.model)
+    logger.info(f"Model loaded: {args.model}")
 
+    logger.info("Loading and preprocessing dataset...")
     ds = load_dataset(args.data)
+    logger.info(f"Train examples: {len(ds['train'])}")
+    logger.info(f"Validation examples: {len(ds['validation'])}")
+
     proc = Preprocessor(tokenizer, args.max_source_len, args.max_target_len)
     cols = ds['train'].column_names
     ds = ds.map(proc, batched=True, remove_columns=cols)
+    logger.info("Dataset preprocessing completed")
 
     data_collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model)
 
@@ -143,9 +178,23 @@ def main():
         callbacks=[CSVLoggerCallback(csv_log_path)],
     )
 
+    logger.info("Starting training...")
+    logger.info(f"Total training steps: {len(ds['train']) // (args.batch_size * args.grad_accum) * args.epochs}")
+
     trainer.train()
+
+    training_time = time.time() - start_time
+    logger.info(f"Training completed in {training_time:.2f} seconds ({training_time/3600:.2f} hours)")
+
+    logger.info(f"Saving model to {args.output}")
     trainer.save_model()
     tokenizer.save_pretrained(args.output)
+    logger.info("Model and tokenizer saved successfully")
+
+    log_section(logger, "Training Summary")
+    logger.info(f"Total time: {training_time/3600:.2f} hours")
+    logger.info(f"Output directory: {args.output}")
+    logger.info(f"Training log: {csv_log_path}")
 
 
 if __name__ == '__main__':

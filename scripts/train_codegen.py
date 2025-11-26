@@ -40,6 +40,7 @@ if torch.backends.mps.is_available():
 
 from dataclasses import dataclass
 from typing import Dict, List, Any
+import time
 import datasets as hfds
 from transformers import (
     AutoTokenizer,
@@ -48,6 +49,7 @@ from transformers import (
     TrainingArguments,
     TrainerCallback,
 )
+from logger_utils import setup_logger, log_section, log_config
 
 
 PROMPT = "Predict class name:\n{source}\nName:"
@@ -158,6 +160,12 @@ def main():
     ap.add_argument('--cuda-device', type=int, default=0, help='CUDA device id (default: 0)')
     args = ap.parse_args()
 
+    # Setup logger
+    logger = setup_logger('train_codegen')
+    start_time = time.time()
+
+    log_section(logger, "CodeGen Training")
+
     hfds.logging.set_verbosity_info()
 
     # Set device
@@ -166,33 +174,65 @@ def main():
         os.environ['CUDA_VISIBLE_DEVICES'] = ''
         device = 'cpu'
         print("Training on CPU (this will be slow)")
+        logger.info("Training on CPU (forced)")
     elif torch.cuda.is_available():
         torch.cuda.set_device(args.cuda_device)
         device = f'cuda:{args.cuda_device}'
         print(f"Training on {device}")
+        logger.info(f"Training on {device} - {torch.cuda.get_device_name(args.cuda_device)}")
     else:
         device = 'mps' if torch.backends.mps.is_available() else 'cpu'
         print(f"Training on {device}")
+        logger.info(f"Training on {device}")
         if device == 'mps':
             print("MPS detected - using memory-optimized settings")
+            logger.info("MPS detected - using memory-optimized settings")
+
+    # Log configuration
+    config = {
+        'model': args.model,
+        'data': args.data,
+        'output': args.output,
+        'batch_size': args.batch_size,
+        'gradient_accumulation_steps': args.grad_accum,
+        'effective_batch_size': args.batch_size * args.grad_accum,
+        'learning_rate': args.lr,
+        'epochs': args.epochs,
+        'max_source_len': args.max_source_len,
+        'max_target_len': args.max_target_len,
+        'fp16': args.fp16,
+        'bf16': args.bf16,
+        'gradient_checkpointing': args.gradient_checkpointing,
+        'seed': args.seed,
+    }
+    log_config(logger, config)
 
     # Load CodeGen model and tokenizer
+    logger.info("Loading tokenizer and model...")
     tokenizer = AutoTokenizer.from_pretrained(args.model, use_fast=False)
     # Set pad token if not present
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
-    
+        logger.info("Set pad_token to eos_token")
+
     model = AutoModelForCausalLM.from_pretrained(args.model)
-    
+    logger.info(f"Model loaded: {args.model}")
+
     # Enable gradient checkpointing if requested
     if args.gradient_checkpointing:
         model.gradient_checkpointing_enable()
         print("Gradient checkpointing enabled")
+        logger.info("Gradient checkpointing enabled")
 
+    logger.info("Loading and preprocessing dataset...")
     ds = load_dataset(args.data)
+    logger.info(f"Train examples: {len(ds['train'])}")
+    logger.info(f"Validation examples: {len(ds['validation'])}")
+
     proc = Preprocessor(tokenizer, args.max_source_len, args.max_target_len)
     cols = ds['train'].column_names
     ds = ds.map(proc, batched=True, remove_columns=cols)
+    logger.info("Dataset preprocessing completed")
 
     # Use custom data collator
     data_collator = CustomDataCollator(tokenizer=tokenizer)
@@ -201,7 +241,7 @@ def main():
     # Adafactor doesn't work well with MPS, use AdamW instead
     use_mps = torch.backends.mps.is_available() and not args.cpu and not torch.cuda.is_available()
     optimizer = 'adamw_torch' if use_mps else 'adafactor'
-    
+
     training_args = TrainingArguments(
         output_dir=args.output,
         evaluation_strategy='steps',
@@ -228,6 +268,8 @@ def main():
     print(f"Using optimizer: {optimizer}")
     print(f"Batch size: {args.batch_size}, Gradient accumulation: {args.grad_accum}")
     print(f"Effective batch size: {args.batch_size * args.grad_accum}")
+    logger.info(f"Using optimizer: {optimizer}")
+    logger.info(f"Effective batch size: {args.batch_size * args.grad_accum}")
 
     csv_log_path = os.path.join(args.output, 'training_log.csv')
     
@@ -236,7 +278,8 @@ def main():
     if use_mps:
         callbacks.append(MPSMemoryCallback())
         print("MPS memory management callback enabled")
-    
+        logger.info("MPS memory management callback enabled")
+
     trainer = Trainer(
         model=model,
         args=training_args,
@@ -250,10 +293,25 @@ def main():
     # Clear cache before training
     if use_mps:
         torch.mps.empty_cache()
-    
+        logger.info("MPS cache cleared")
+
+    logger.info("Starting training...")
+    logger.info(f"Total training steps: {len(ds['train']) // (args.batch_size * args.grad_accum) * args.epochs}")
+
     trainer.train()
+
+    training_time = time.time() - start_time
+    logger.info(f"Training completed in {training_time:.2f} seconds ({training_time/3600:.2f} hours)")
+
+    logger.info(f"Saving model to {args.output}")
     trainer.save_model()
     tokenizer.save_pretrained(args.output)
+    logger.info("Model and tokenizer saved successfully")
+
+    log_section(logger, "Training Summary")
+    logger.info(f"Total time: {training_time/3600:.2f} hours")
+    logger.info(f"Output directory: {args.output}")
+    logger.info(f"Training log: {csv_log_path}")
 
 
 if __name__ == '__main__':

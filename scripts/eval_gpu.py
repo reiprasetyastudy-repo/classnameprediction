@@ -11,18 +11,22 @@ Inputs:
 
 Outputs:
   model/metrics/<run>/metrics.json with EM, EM_ci, avg_levenshtein, topk accuracy
+  logs/eval_gpu_YYYYMMDD_HHMMSS.log with detailed execution log
 """
 import argparse
 import json
 import os
 from pathlib import Path
 from typing import List, Dict
+import time
 
 import datasets as hfds
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 import torch
 from tqdm import tqdm
 from rapidfuzz.distance import Levenshtein
+
+from logger_utils import setup_logger_with_tqdm, log_section, log_config, log_metrics
 
 
 PROMPT = "Predict class name:\n{source}\nName:"
@@ -68,16 +72,26 @@ def main():
     ap.add_argument('--batch-size', type=int, default=None, help='Batch size (default: 16 for GPU, 8 for CPU)')
     args = ap.parse_args()
 
+    # Setup logger
+    logger = setup_logger_with_tqdm('eval_gpu')
+    start_time = time.time()
+
+    log_section(logger, "CodeT5+ Evaluation with GPU Support")
+
     # Determine device
     if args.cpu:
         device = torch.device('cpu')
         print("Using CPU for evaluation")
+        logger.info("Using CPU for evaluation (forced)")
     else:
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         if device.type == 'cuda':
-            print(f"Using GPU: {torch.cuda.get_device_name(0)}")
+            gpu_name = torch.cuda.get_device_name(0)
+            print(f"Using GPU: {gpu_name}")
+            logger.info(f"Using GPU: {gpu_name}")
         else:
             print("GPU not available, using CPU")
+            logger.info("GPU not available, using CPU")
 
     # Set batch size based on device if not specified
     if args.batch_size is None:
@@ -87,15 +101,28 @@ def main():
 
     print(f"Batch size: {batch_size}")
 
+    # Log configuration
+    config = {
+        'checkpoint': args.ckpt,
+        'data': args.data,
+        'k': args.k,
+        'device': str(device),
+        'batch_size': batch_size,
+    }
+    log_config(logger, config)
+
     tokenizer = AutoTokenizer.from_pretrained(args.ckpt, use_fast=False)
     model = AutoModelForSeq2SeqLM.from_pretrained(args.ckpt)
+    logger.info("Model and tokenizer loaded")
 
     # Move model to device
     model = model.to(device)
     model.eval()
+    logger.info(f"Model moved to {device} and set to eval mode")
 
     ds = load_test(args.data)
     print(f"Loaded {len(ds)} test examples")
+    logger.info(f"Loaded {len(ds)} test examples")
 
     k = args.k
     em = 0
@@ -107,6 +134,9 @@ def main():
 
     metrics_dir = Path('model/metrics') / Path(args.ckpt).name
     metrics_dir.mkdir(parents=True, exist_ok=True)
+
+    logger.info(f"Starting evaluation...")
+    logger.info(f"Total batches: {len(ds) // batch_size + (1 if len(ds) % batch_size else 0)}")
 
     for i in tqdm(range(0, len(ds), batch_size), desc="Evaluating"):
         batch = ds[i:i+batch_size]
@@ -148,19 +178,37 @@ def main():
         'batch_size': batch_size,
     }
 
-    (metrics_dir / 'metrics.json').write_text(json.dumps(metrics, indent=2), encoding='utf-8')
+    # Calculate elapsed time
+    elapsed_time = time.time() - start_time
+    metrics['elapsed_time_seconds'] = elapsed_time
+    metrics['samples_per_second'] = n / elapsed_time if elapsed_time > 0 else 0
+
+    logger.info(f"Evaluation completed in {elapsed_time:.2f} seconds")
+    logger.info(f"Average speed: {metrics['samples_per_second']:.2f} samples/second")
+
+    # Save metrics
+    metrics_file = metrics_dir / 'metrics.json'
+    metrics_file.write_text(json.dumps(metrics, indent=2), encoding='utf-8')
+    logger.info(f"Metrics saved to: {metrics_file}")
 
     # Save detailed results for analysis
     results_file = metrics_dir / 'detailed_results.jsonl'
     with open(results_file, 'w', encoding='utf-8') as f:
         for result in all_results:
             f.write(json.dumps(result, ensure_ascii=False) + '\n')
+    logger.info(f"Detailed results saved to: {results_file}")
 
+    # Print results to console (original behavior)
     print("\n" + "="*50)
     print("EVALUATION RESULTS")
     print("="*50)
     print(json.dumps(metrics, indent=2))
     print(f"\nDetailed results saved to: {results_file}")
+
+    # Also log to file
+    log_section(logger, "EVALUATION RESULTS")
+    log_metrics(logger, metrics)
+    logger.info(f"Total evaluation time: {elapsed_time:.2f} seconds ({elapsed_time/60:.2f} minutes)")
 
 
 if __name__ == '__main__':
