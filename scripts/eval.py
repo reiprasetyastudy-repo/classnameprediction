@@ -9,18 +9,22 @@ Inputs:
 
 Outputs:
   model/metrics/<run>/metrics.json with EM, EM_ci, avg_levenshtein, topk accuracy
+  logs/eval_YYYYMMDD_HHMMSS.log with detailed execution log
 """
 import argparse
 import json
 import os
 from pathlib import Path
 from typing import List, Dict
+import time
 
 import datasets as hfds
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 import torch
 from tqdm import tqdm
 from rapidfuzz.distance import Levenshtein
+
+from logger_utils import setup_logger_with_tqdm, log_section, log_config, log_metrics
 
 
 PROMPT = "Predict class name:\n{source}\nName:"
@@ -64,11 +68,31 @@ def main():
     ap.add_argument('--k', type=int, default=5)
     args = ap.parse_args()
 
+    # Setup logger
+    logger = setup_logger_with_tqdm('eval')
+    start_time = time.time()
+
+    log_section(logger, "CodeT5+ Evaluation (CPU)")
+
+    # Log configuration
+    config = {
+        'checkpoint': args.ckpt,
+        'data': args.data,
+        'k': args.k,
+        'device': 'cpu',
+        'batch_size': 8,
+    }
+    log_config(logger, config)
+
+    logger.info("Loading model and tokenizer...")
     tokenizer = AutoTokenizer.from_pretrained(args.ckpt, use_fast=False)
     model = AutoModelForSeq2SeqLM.from_pretrained(args.ckpt)
     model.eval()
+    logger.info("Model loaded and set to eval mode")
 
+    logger.info("Loading test dataset...")
     ds = load_test(args.data)
+    logger.info(f"Loaded {len(ds)} test examples")
 
     k = args.k
     em = 0
@@ -82,6 +106,9 @@ def main():
     metrics_dir.mkdir(parents=True, exist_ok=True)
 
     batch_size = 8
+    logger.info("Starting evaluation...")
+    logger.info(f"Total batches: {len(ds) // batch_size + (1 if len(ds) % batch_size else 0)}")
+
     for i in tqdm(range(0, len(ds), batch_size)):
         batch = ds[i:i+batch_size]
         prompts = [PROMPT.format(source=s) for s in batch['source']]
@@ -120,16 +147,34 @@ def main():
         'k': k,
     }
 
-    (metrics_dir / 'metrics.json').write_text(json.dumps(metrics, indent=2), encoding='utf-8')
+    # Calculate elapsed time
+    elapsed_time = time.time() - start_time
+    metrics['elapsed_time_seconds'] = elapsed_time
+    metrics['samples_per_second'] = n / elapsed_time if elapsed_time > 0 else 0
+
+    logger.info(f"Evaluation completed in {elapsed_time:.2f} seconds")
+    logger.info(f"Average speed: {metrics['samples_per_second']:.2f} samples/second")
+
+    # Save metrics
+    metrics_file = metrics_dir / 'metrics.json'
+    metrics_file.write_text(json.dumps(metrics, indent=2), encoding='utf-8')
+    logger.info(f"Metrics saved to: {metrics_file}")
 
     # Save detailed results for analysis
     results_file = metrics_dir / 'detailed_results.jsonl'
     with open(results_file, 'w', encoding='utf-8') as f:
         for result in all_results:
             f.write(json.dumps(result, ensure_ascii=False) + '\n')
+    logger.info(f"Detailed results saved to: {results_file}")
 
+    # Print to console (original behavior)
     print(json.dumps(metrics, indent=2))
     print(f"\nDetailed results saved to: {results_file}")
+
+    # Also log to file
+    log_section(logger, "EVALUATION RESULTS")
+    log_metrics(logger, metrics)
+    logger.info(f"Total evaluation time: {elapsed_time:.2f} seconds ({elapsed_time/60:.2f} minutes)")
 
 
 if __name__ == '__main__':

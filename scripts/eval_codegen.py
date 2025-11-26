@@ -9,18 +9,22 @@ Inputs:
 
 Outputs:
   model/metrics/<run>/metrics.json with EM, EM_ci, avg_levenshtein, topk accuracy
+  logs/eval_codegen_YYYYMMDD_HHMMSS.log with detailed execution log
 """
 import argparse
 import json
 import os
 from pathlib import Path
 from typing import List, Dict
+import time
 
 import datasets as hfds
 from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch
 from tqdm import tqdm
 from rapidfuzz.distance import Levenshtein
+
+from logger_utils import setup_logger_with_tqdm, log_section, log_config, log_metrics
 
 
 PROMPT = "Predict class name:\n{source}\nName:"
@@ -86,7 +90,7 @@ def extract_prediction(text: str, original_prompt: str) -> str:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--ckpt', type=str, required=True, 
+    ap.add_argument('--ckpt', type=str, required=True,
                    help='Path to model checkpoint directory (e.g., run1-python-codegen/checkpoint-5000)')
     ap.add_argument('--data', type=str, required=True,
                    help='Path to JSONL file or directory containing test.jsonl')
@@ -94,25 +98,49 @@ def main():
                    help='Top-k to compute')
     args = ap.parse_args()
 
+    # Setup logger
+    logger = setup_logger_with_tqdm('eval_codegen')
+    start_time = time.time()
+
+    log_section(logger, "CodeGen Evaluation")
+
     print(f"Loading model from: {args.ckpt}")
-    
+    logger.info(f"Loading model from: {args.ckpt}")
+
     # Load tokenizer and model for CodeGen
     tokenizer = AutoTokenizer.from_pretrained(args.ckpt)
     model = AutoModelForCausalLM.from_pretrained(args.ckpt)
-    
+    logger.info("Model and tokenizer loaded")
+
     # Add padding token if it doesn't exist
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
-    
+        logger.info("Set pad_token to eos_token")
+
     model.eval()
-    
+
     # Use GPU if available
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
     print(f"Using device: {device}")
+    if device.type == 'cuda':
+        logger.info(f"Using device: {device} - {torch.cuda.get_device_name(0)}")
+    else:
+        logger.info(f"Using device: {device}")
 
     ds = load_test(args.data)
     print(f"Loaded test dataset with {len(ds)} examples")
+    logger.info(f"Loaded test dataset with {len(ds)} examples")
+
+    # Log configuration
+    config = {
+        'checkpoint': args.ckpt,
+        'data': args.data,
+        'k': args.k,
+        'device': str(device),
+        'batch_size': 4,
+    }
+    log_config(logger, config)
 
     k = args.k
     em = 0
@@ -127,10 +155,14 @@ def main():
     metrics_dir = Path('model/metrics') / parent_dir / ckpt_name
     metrics_dir.mkdir(parents=True, exist_ok=True)
     print(f"Metrics will be saved to: {metrics_dir}")
+    logger.info(f"Metrics will be saved to: {metrics_dir}")
 
     batch_size = 4  # Reduced for CodeGen-350M if GPU memory is limited
     all_results = []
-    
+
+    logger.info("Starting evaluation...")
+    logger.info(f"Total batches: {len(ds) // batch_size + (1 if len(ds) % batch_size else 0)}")
+
     for i in tqdm(range(0, len(ds), batch_size), desc="Evaluating"):
         batch = ds[i:i+batch_size]
         prompts = [PROMPT.format(source=s) for s in batch['source']]
@@ -169,7 +201,11 @@ def main():
                 
         except Exception as e:
             print(f"Error processing batch starting at index {i}: {e}")
+            logger.error(f"Error processing batch starting at index {i}: {e}")
             continue
+
+    # Calculate elapsed time
+    elapsed_time = time.time() - start_time
 
     # Calculate final metrics
     metrics = {
@@ -181,21 +217,34 @@ def main():
         'k': k,
         'model': args.ckpt,
         'dataset': args.data,
+        'elapsed_time_seconds': elapsed_time,
+        'samples_per_second': n / elapsed_time if elapsed_time > 0 else 0,
     }
+
+    logger.info(f"Evaluation completed in {elapsed_time:.2f} seconds")
+    logger.info(f"Average speed: {metrics['samples_per_second']:.2f} samples/second")
 
     # Save metrics
     metrics_file = metrics_dir / 'metrics.json'
     metrics_file.write_text(json.dumps(metrics, indent=2), encoding='utf-8')
-    
+    logger.info(f"Metrics saved to: {metrics_file}")
+
     # Save detailed results for analysis
     results_file = metrics_dir / 'detailed_results.jsonl'
     with open(results_file, 'w', encoding='utf-8') as f:
         for result in all_results:
             f.write(json.dumps(result, ensure_ascii=False) + '\n')
-    
+    logger.info(f"Detailed results saved to: {results_file}")
+
+    # Print to console (original behavior)
     print("\n=== Evaluation Results ===")
     print(json.dumps(metrics, indent=2))
     print(f"\nDetailed results saved to: {results_file}")
+
+    # Also log to file
+    log_section(logger, "EVALUATION RESULTS")
+    log_metrics(logger, metrics)
+    logger.info(f"Total evaluation time: {elapsed_time:.2f} seconds ({elapsed_time/60:.2f} minutes)")
 
 
 if __name__ == '__main__':
