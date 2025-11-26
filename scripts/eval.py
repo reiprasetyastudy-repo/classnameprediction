@@ -76,6 +76,7 @@ def main():
     topk = 0
     lev_sum = 0.0
     n = 0
+    all_results = []
 
     metrics_dir = Path('model/metrics') / Path(args.ckpt).name
     metrics_dir.mkdir(parents=True, exist_ok=True)
@@ -85,10 +86,22 @@ def main():
         batch = ds[i:i+batch_size]
         prompts = [PROMPT.format(source=s) for s in batch['source']]
         g = generate(model, tokenizer, prompts, num_return_sequences=k)
-        for preds, gold in zip(g, batch['target']):
+        for j, (preds, gold) in enumerate(zip(g, batch['target'])):
             n += 1
             # Normalize predictions: take first token-ish segment (strip spaces, split non-word)
             norm_preds = [p.strip().split()[0] if p.strip() else '' for p in preds]
+
+            # Store detailed results
+            result = {
+                'source': batch['source'][j],
+                'target': gold,
+                'predictions': norm_preds,
+                'top_prediction': norm_preds[0] if norm_preds else "",
+                'exact_match': norm_preds[0] == gold if norm_preds else False,
+                'in_topk': gold in norm_preds[:k],
+            }
+            all_results.append(result)
+
             if norm_preds and norm_preds[0] == gold:
                 em += 1
             if norm_preds and norm_preds[0].lower() == gold.lower():
@@ -108,7 +121,15 @@ def main():
     }
 
     (metrics_dir / 'metrics.json').write_text(json.dumps(metrics, indent=2), encoding='utf-8')
+
+    # Save detailed results for analysis
+    results_file = metrics_dir / 'detailed_results.jsonl'
+    with open(results_file, 'w', encoding='utf-8') as f:
+        for result in all_results:
+            f.write(json.dumps(result, ensure_ascii=False) + '\n')
+
     print(json.dumps(metrics, indent=2))
+    print(f"\nDetailed results saved to: {results_file}")
 
 
 if __name__ == '__main__':
