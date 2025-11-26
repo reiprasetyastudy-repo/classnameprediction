@@ -2,6 +2,14 @@
 
 This repo scaffolds an end-to-end pipeline to fine-tune CodeT5+ to predict class names from code snippets. It includes dataset building from GitHub repos, training, and evaluation.
 
+## Features
+
+- ✅ **GPU-Accelerated Evaluation**: 10-20x faster inference with automatic GPU detection
+- ✅ **Comprehensive Logging**: All scripts log to `logs/` with timestamps for history and monitoring
+- ✅ **Detailed Results**: Per-sample predictions saved for error analysis
+- ✅ **Progress Monitoring**: Use `tail -f` to monitor long-running processes
+- ✅ **Multiple Models**: Support for CodeT5+ and CodeGen architectures
+
 ## Setup
 
 Create a virtualenv and install deps:
@@ -50,8 +58,9 @@ Predict class name:
 Name:
 ```
 
-## Train Codegen
+## Train CodeGen
 
+### Python Dataset (CPU - slower but universal)
 ```bash
 python scripts/train_codegen.py \
   --model Salesforce/codegen-350M-mono \
@@ -60,9 +69,30 @@ python scripts/train_codegen.py \
   --batch-size 1 \
   --grad-accum 8 \
   --max-source-len 256 \
-  --gradient-checkpointing
+  --gradient-checkpointing \
   --cpu
 ```
+
+### Java Dataset with GPU (recommended - much faster)
+```bash
+python scripts/train_codegen.py \
+  --model Salesforce/codegen-350M-mono \
+  --data datasets/java \
+  --output model/checkpoints/run1-java-codegen \
+  --batch-size 4 \
+  --grad-accum 4 \
+  --max-source-len 512 \
+  --gradient-checkpointing \
+  --fp16
+```
+
+**CodeGen Training Options:**
+- `--cpu`: Force CPU training (slower but works everywhere)
+- `--fp16`: Use FP16 mixed precision on CUDA GPUs (faster, less memory)
+- `--bf16`: Use BF16 mixed precision for Apple Silicon/MPS
+- `--gradient-checkpointing`: Save memory at cost of ~20% speed
+- `--batch-size N`: Samples per GPU (reduce if OOM)
+- `--grad-accum N`: Gradient accumulation steps (effective batch = batch-size × grad-accum)
 
 ## Evaluate
 
@@ -100,12 +130,24 @@ python scripts/eval_gpu.py \
 ```
 
 ## Evaluate CodeGen
+
+### Python Dataset
 ```bash
 python scripts/eval_codegen.py \
   --ckpt model/checkpoints/run1-python-codegen \
   --data datasets/python \
   --k 5
 ```
+
+### Java Dataset (GPU auto-detected)
+```bash
+python scripts/eval_codegen.py \
+  --ckpt model/checkpoints/run1-java-codegen \
+  --data datasets/java \
+  --k 5
+```
+
+CodeGen evaluation automatically uses GPU if available (CUDA or MPS), falling back to CPU otherwise.
 
 Produces: `model/metrics/run1-python/metrics.json` with exact match, case-insensitive EM, top-k accuracy, and average Levenshtein distance.
 
@@ -173,3 +215,62 @@ CUDA_VISIBLE_DEVICES=1 python scripts/train.py \
 - This ensures all CUDA allocations go to the correct GPU and avoids out-of-memory errors on the wrong device.
 
 See [PyTorch CUDA documentation](https://pytorch.org/docs/stable/notes/cuda.html#environment-variables) for more details.
+
+## Logging and Monitoring
+
+All scripts automatically log to `logs/` directory with timestamps:
+
+```
+logs/
+├── eval_gpu_20250127_143022.log
+├── train_20250127_091530.log
+└── build_dataset_20250127_083012.log
+```
+
+### Monitor Long-Running Processes
+
+When you run a script, it will show the log file location:
+
+```bash
+python scripts/eval_gpu.py --ckpt model/checkpoints/run1-java --data datasets/java --k 5
+
+# Output shows:
+# Logging to: logs/eval_gpu_20250127_143022.log
+# Monitor progress: tail -f logs/eval_gpu_20250127_143022.log
+```
+
+**Monitor in real-time** (open in separate terminal):
+
+```bash
+tail -f logs/eval_gpu_20250127_143022.log
+```
+
+### Running in Background
+
+```bash
+# Run in background
+python scripts/eval_gpu.py --ckpt model/checkpoints/run1-java --data datasets/java --k 5 &
+
+# Monitor the latest log
+tail -f $(ls -t logs/eval_gpu_*.log | head -1)
+```
+
+### Recovery After Disconnection
+
+If disconnected from remote server:
+
+```bash
+# Reconnect and find your log
+ls -lt logs/
+
+# Check progress
+tail -50 logs/eval_gpu_20250127_143022.log
+
+# Continue monitoring
+tail -f logs/eval_gpu_20250127_143022.log
+
+# Check if process still running
+ps aux | grep eval_gpu
+```
+
+**See [LOGGING.md](LOGGING.md) for complete logging documentation.**
