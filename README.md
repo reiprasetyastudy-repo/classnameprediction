@@ -40,31 +40,28 @@ python scripts/build_dataset.py \
 
 Outputs per language: `datasets/<language>/{train,valid,test}.jsonl` with fields `language, repo, path, class_span, source, target`.
 
-## Train CodeT5+
+## Fair Comparison Training (CodeT5+ vs CodeGen)
 
-Train on Python only (adjust path for Java):
+**Optimized for RTX 5090 (32GB VRAM) - GPU Only**
+
+This section provides matched configurations for direct comparison between CodeT5+ and CodeGen models. Both models are trained with identical effective batch sizes, learning rates, and epochs to ensure fair evaluation.
+
+### Configuration 1: Standard Training (3 Epochs)
+
+**CodeT5+ - Java Dataset:**
 ```bash
 python scripts/train.py \
   --model Salesforce/codet5p-220m \
-  --data datasets/python \
-  --output model/checkpoints/run1-python \
-  --batch-size 8 --grad-accum 2 --epochs 3 --fp16 
+  --data datasets/java \
+  --output model/checkpoints/run1-java \
+  --batch-size 8 \
+  --grad-accum 2 \
+  --lr 5e-5 \
+  --epochs 3 \
+  --fp16
 ```
 
-The prompt template is:
-```
-Predict class name:
-{source}
-Name:
-```
-
-## Train CodeGen (Memory-Optimized for 12GB-32GB VRAM)
-
-### Recommended Configuration (Fair Comparison with CodeT5+)
-
-For direct comparison with CodeT5+, use this configuration on RTX 5090 or similar 32GB+ VRAM:
-
-**Java Dataset:**
+**CodeGen - Java Dataset:**
 ```bash
 python scripts/train_codegen.py \
   --model Salesforce/codegen-350M-mono \
@@ -76,28 +73,81 @@ python scripts/train_codegen.py \
   --epochs 3
 ```
 
-**Python Dataset:**
+**Comparison:**
+| Parameter | CodeT5+ | CodeGen |
+|-----------|---------|---------|
+| Effective Batch Size | 8 × 2 = 16 | 4 × 4 = 16 ✓ |
+| Learning Rate | 5e-5 | 5e-5 ✓ |
+| Epochs | 3 | 3 ✓ |
+| FP16 | Yes | Yes ✓ |
+| Training Time | ~2-3 hours | ~2-3 hours |
+
+### Configuration 2: Extended Training (10 Epochs)
+
+**CodeT5+ - Java Dataset:**
+```bash
+python scripts/train.py \
+  --model Salesforce/codet5p-220m \
+  --data datasets/java \
+  --output model/checkpoints/run2-java \
+  --batch-size 8 \
+  --grad-accum 4 \
+  --lr 2e-5 \
+  --epochs 10 \
+  --fp16
+```
+
+**CodeGen - Java Dataset:**
 ```bash
 python scripts/train_codegen.py \
   --model Salesforce/codegen-350M-mono \
-  --data datasets/python \
-  --output model/checkpoints/run1-python-codegen \
-  --batch-size 4 \
+  --data datasets/java \
+  --output model/checkpoints/run2-java-codegen \
+  --batch-size 8 \
   --grad-accum 4 \
-  --lr 5e-5 \
-  --epochs 3
+  --lr 2e-5 \
+  --epochs 10
 ```
 
-**Configuration details:**
-- Effective batch size: 4 × 4 = 16 (same as CodeT5+: 8 × 2 = 16)
-- Learning rate: 5e-5 (same as CodeT5+)
-- Epochs: 3 (same as CodeT5+)
-- FP16: Enabled automatically on CUDA
-- Gradient checkpointing: Enabled by default
-- Max sequence length: 512 tokens
-- Seed: 42 (for reproducibility)
+**Comparison:**
+| Parameter | CodeT5+ | CodeGen |
+|-----------|---------|---------|
+| Effective Batch Size | 8 × 4 = 32 | 8 × 4 = 32 ✓ |
+| Learning Rate | 2e-5 | 2e-5 ✓ |
+| Epochs | 10 | 10 ✓ |
+| FP16 | Yes | Yes ✓ |
+| Training Time | ~6-8 hours | ~6-8 hours |
 
-This ensures fair comparison between CodeGen and CodeT5+ models with equivalent training conditions.
+**Notes:**
+- Configuration 1: Faster training, good for initial comparison
+- Configuration 2: Extended training, better convergence and final performance
+- Both configurations ensure identical training conditions for fair model comparison
+- Logs are saved to `logs/codet5/` and `logs/codegen/` respectively
+- All configurations use seed 42 for reproducibility
+
+---
+
+## Train CodeT5+ (Other Configurations)
+
+For Python dataset or custom configurations:
+```bash
+python scripts/train.py \
+  --model Salesforce/codet5p-220m \
+  --data datasets/python \
+  --output model/checkpoints/run1-python \
+  --batch-size 8 --grad-accum 2 --epochs 3 --fp16
+```
+
+The prompt template is:
+```
+Predict class name:
+{source}
+Name:
+```
+
+---
+
+## Train CodeGen (Other VRAM Configurations)
 
 ### For 12GB VRAM (e.g., RTX 3060, RTX 4060 Ti)
 
