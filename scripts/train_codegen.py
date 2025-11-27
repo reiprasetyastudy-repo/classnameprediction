@@ -48,9 +48,11 @@ class MaskedClassNameDataset(Dataset):
             full_texts = []
             prompt_texts = []
 
-            for item in batch:
-                source = item['source']
-                target = item['target']
+            # HuggingFace dataset batch is dict of lists, not list of dicts
+            sources = batch['source']
+            targets = batch['target']
+
+            for source, target in zip(sources, targets):
                 prompt_text = f"{source}\nClass name:"
                 full_text = prompt_text + f" {target}<|endoftext|>"
                 full_texts.append(full_text)
