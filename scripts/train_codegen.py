@@ -31,67 +31,57 @@ def load_dataset(data_dir: str, logger):
     return ds
 
 class MaskedClassNameDataset(Dataset):
+    """Lazy loading dataset - tokenizes on-the-fly instead of preprocessing all samples upfront"""
     def __init__(self, dataset, tokenizer, max_length, logger):
+        self.dataset = dataset
         self.tokenizer = tokenizer
         self.max_length = max_length
-        self.samples = []
-
-        logger.info(f"Preprocessing {len(dataset)} samples...")
-
-        for i, item in enumerate(dataset):
-            source = item['source']
-            target = item['target']
-
-            if not source or not target:
-                continue
-
-            prompt_text = f"{source}\nClass name:"
-            full_text = prompt_text + f" {target}<|endoftext|>"
-
-            full_encoding = tokenizer(
-                full_text,
-                max_length=self.max_length,
-                truncation=True,
-                padding="max_length",
-                return_tensors="pt"
-            )
-
-            input_ids = full_encoding['input_ids'][0]
-            attention_mask = full_encoding['attention_mask'][0]
-
-            prompt_encoding = tokenizer(
-                prompt_text,
-                max_length=self.max_length,
-                truncation=True,
-                add_special_tokens=False,
-                return_tensors="pt"
-            )
-            prompt_len = prompt_encoding['input_ids'].shape[1]
-
-            labels = input_ids.clone()
-
-            if prompt_len < len(labels):
-                labels[:prompt_len] = -100
-
-            labels[attention_mask == 0] = -100
-
-            sample = {
-                'input_ids': input_ids,
-                'attention_mask': attention_mask,
-                'labels': labels
-            }
-            self.samples.append(sample)
-
-            if (i + 1) % 10000 == 0:
-                logger.info(f"Preprocessed {i + 1}/{len(dataset)} samples")
-
-        logger.info(f"Preprocessing complete: {len(self.samples)} valid samples")
+        logger.info(f"Dataset initialized with {len(dataset)} samples (lazy loading)")
 
     def __len__(self):
-        return len(self.samples)
+        return len(self.dataset)
 
     def __getitem__(self, idx):
-        return self.samples[idx]
+        item = self.dataset[idx]
+        source = item['source']
+        target = item['target']
+
+        prompt_text = f"{source}\nClass name:"
+        full_text = prompt_text + f" {target}<|endoftext|>"
+
+        # Tokenize full text
+        full_encoding = self.tokenizer(
+            full_text,
+            max_length=self.max_length,
+            truncation=True,
+            padding="max_length",
+            return_tensors="pt"
+        )
+
+        input_ids = full_encoding['input_ids'][0]
+        attention_mask = full_encoding['attention_mask'][0]
+
+        # Tokenize prompt to get length
+        prompt_encoding = self.tokenizer(
+            prompt_text,
+            max_length=self.max_length,
+            truncation=True,
+            add_special_tokens=False,
+            return_tensors="pt"
+        )
+        prompt_len = prompt_encoding['input_ids'].shape[1]
+
+        # Create labels: mask prompt part with -100
+        labels = input_ids.clone()
+        if prompt_len < len(labels):
+            labels[:prompt_len] = -100
+        labels[attention_mask == 0] = -100
+
+        return {
+            'input_ids': input_ids,
+            'attention_mask': attention_mask,
+            'labels': labels
+        }
 
 # FUNGSI BARU: Menghemat Memori GPU saat Evaluasi
 def preprocess_logits_for_metrics(logits, labels):
@@ -171,7 +161,7 @@ def main():
     logger.info("Loading dataset...")
     ds = load_dataset(args.data, logger)
 
-    log_section(logger, "Dataset Preprocessing")
+    log_section(logger, "Dataset Initialization")
     train_dataset = MaskedClassNameDataset(ds['train'], tokenizer, args.max_length, logger)
     val_dataset = MaskedClassNameDataset(ds['validation'], tokenizer, args.max_length, logger)
 

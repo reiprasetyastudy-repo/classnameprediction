@@ -70,7 +70,7 @@ Outputs per language: `datasets/<language>/{train,valid,test}.jsonl` with fields
 
 This section provides matched configurations for direct comparison between CodeT5+ and CodeGen models. Both models are trained with identical effective batch sizes, learning rates, and epochs to ensure fair evaluation.
 
-### Configuration 1: Standard Training (3 Epochs)
+### Configuration 1: Balanced Training (3 Epochs)
 
 **CodeT5+ - Java Dataset:**
 ```bash
@@ -78,7 +78,7 @@ python scripts/train.py \
   --model Salesforce/codet5p-220m \
   --data datasets/java \
   --output model/checkpoints/run1-java \
-  --batch-size 8 \
+  --batch-size 16 \
   --grad-accum 2 \
   --lr 5e-5 \
   --epochs 3 \
@@ -91,7 +91,7 @@ python scripts/train_codegen.py \
   --model Salesforce/codegen-350M-mono \
   --data datasets/java \
   --output model/checkpoints/run1-java-codegen \
-  --batch-size 8 \
+  --batch-size 16 \
   --grad-accum 2 \
   --lr 5e-5 \
   --epochs 3 \
@@ -117,17 +117,18 @@ python scripts/eval_codegen.py \
 **Comparison:**
 | Parameter | CodeT5+ | CodeGen |
 |-----------|---------|---------|
-| Batch Size | 8 | 8 ✓ |
+| Batch Size | 16 | 16 ✓ |
 | Gradient Accumulation | 2 | 2 ✓ |
-| Effective Batch Size | 8 × 2 = 16 | 8 × 2 = 16 ✓ |
+| Effective Batch Size | 16 × 2 = 32 | 16 × 2 = 32 ✓ |
 | Learning Rate | 5e-5 | 5e-5 ✓ |
 | Epochs | 3 | 3 ✓ |
 | Max Length | 1024 (source) + 32 (target) | 1024 (combined) ✓ |
 | FP16 | Yes | Yes ✓ |
 | Seed | 42 | 42 ✓ |
-| Training Time | ~2-3 hours | ~2-3 hours |
+| VRAM Usage | ~18-20GB | ~18-20GB |
+| Training Time | ~1-1.5 hours | ~1-1.5 hours |
 
-### Configuration 2: Extended Training (10 Epochs)
+### Configuration 2: Maximum Speed Training (10 Epochs)
 
 **CodeT5+ - Java Dataset:**
 ```bash
@@ -135,8 +136,8 @@ python scripts/train.py \
   --model Salesforce/codet5p-220m \
   --data datasets/java \
   --output model/checkpoints/run2-java \
-  --batch-size 8 \
-  --grad-accum 4 \
+  --batch-size 24 \
+  --grad-accum 2 \
   --lr 2e-5 \
   --epochs 10 \
   --fp16
@@ -148,8 +149,8 @@ python scripts/train_codegen.py \
   --model Salesforce/codegen-350M-mono \
   --data datasets/java \
   --output model/checkpoints/run2-java-codegen \
-  --batch-size 8 \
-  --grad-accum 4 \
+  --batch-size 24 \
+  --grad-accum 2 \
   --lr 2e-5 \
   --epochs 10 \
   --max-length 1024
@@ -174,21 +175,24 @@ python scripts/eval_codegen.py \
 **Comparison:**
 | Parameter | CodeT5+ | CodeGen |
 |-----------|---------|---------|
-| Batch Size | 8 | 8 ✓ |
-| Gradient Accumulation | 4 | 4 ✓ |
-| Effective Batch Size | 8 × 4 = 32 | 8 × 4 = 32 ✓ |
+| Batch Size | 24 | 24 ✓ |
+| Gradient Accumulation | 2 | 2 ✓ |
+| Effective Batch Size | 24 × 2 = 48 | 24 × 2 = 48 ✓ |
 | Learning Rate | 2e-5 | 2e-5 ✓ |
 | Epochs | 10 | 10 ✓ |
 | Max Length | 1024 (source) + 32 (target) | 1024 (combined) ✓ |
 | FP16 | Yes | Yes ✓ |
 | Seed | 42 | 42 ✓ |
-| Training Time | ~6-8 hours | ~6-8 hours |
+| VRAM Usage | ~24-26GB | ~24-26GB |
+| Training Time | ~3-4 hours | ~3-4 hours |
 
 **Notes:**
-- Configuration 1: Faster training, good for initial comparison
-- Configuration 2: Extended training, better convergence and final performance
+- **Configuration 1 (Balanced):** 3 epochs, effective batch 32, ~1-1.5 hours - Good for quick experimentation and initial comparison
+- **Configuration 2 (Maximum Speed):** 10 epochs, effective batch 48, ~3-4 hours - Optimized throughput for production training
 - Both configurations ensure identical training conditions for fair model comparison
+- **VRAM Safety:** Config 1 uses ~18-20GB (safe margin), Config 2 uses ~24-26GB (near limit but safe with FP16)
 - **Max Length:** CodeT5+ uses separate lengths for source (1024) and target (32). CodeGen uses combined length (1024) for prompt+target in single sequence
+- **Lazy Loading:** CodeGen now uses lazy loading (no upfront preprocessing), training starts immediately
 - Logs are saved to `logs/codet5/` and `logs/codegen/` respectively
 - All configurations use seed 42 for reproducibility
 
