@@ -131,8 +131,8 @@ def main():
 
     args = ap.parse_args()
 
-    # Setup logger - save to logs/ directory
-    logger = setup_logger('train_codegen')
+    # Setup logger - save to logs/codegen/ directory
+    logger = setup_logger('train_codegen', log_dir='logs/codegen')
 
     log_section(logger, "Training Configuration")
     log_config(logger, {

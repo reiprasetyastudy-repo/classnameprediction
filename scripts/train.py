@@ -99,8 +99,8 @@ def main():
     ap.add_argument('--cuda-device', type=int, default=0, help='CUDA device id (default: 0)')
     args = ap.parse_args()
 
-    # Setup logger
-    logger = setup_logger('train')
+    # Setup logger - save to logs/codet5/ directory
+    logger = setup_logger('train', log_dir='logs/codet5')
     start_time = time.time()
 
     log_section(logger, "CodeT5+ Training")

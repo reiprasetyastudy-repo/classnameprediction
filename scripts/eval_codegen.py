@@ -294,8 +294,8 @@ def compute_validation_metrics(model, eval_dataset, device, tokenizer, logger):
 def evaluate_model(model_path, valid_data_path, max_length=512, num_samples=None, output_dir="./evaluation_results"):
     """Main evaluation function"""
 
-    # Setup logger - save to logs/ directory
-    logger = setup_logger('eval_codegen')
+    # Setup logger - save to logs/codegen/ directory
+    logger = setup_logger('eval_codegen', log_dir='logs/codegen')
 
     log_section(logger, "Evaluation Configuration")
     log_config(logger, {

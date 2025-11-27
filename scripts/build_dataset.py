@@ -164,8 +164,8 @@ def main():
     ap.add_argument('--test', type=float, default=0.1)
     args = ap.parse_args()
 
-    # Setup logger
-    logger = setup_logger('build_dataset')
+    # Setup logger - save to logs/build/ directory
+    logger = setup_logger('build_dataset', log_dir='logs/build')
     start_time = time.time()
 
     log_section(logger, "Building Dataset from GitHub Repositories")

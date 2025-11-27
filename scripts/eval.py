@@ -68,8 +68,8 @@ def main():
     ap.add_argument('--k', type=int, default=5)
     args = ap.parse_args()
 
-    # Setup logger
-    logger = setup_logger_with_tqdm('eval')
+    # Setup logger - save to logs/codet5/ directory
+    logger = setup_logger_with_tqdm('eval', log_dir='logs/codet5')
     start_time = time.time()
 
     log_section(logger, "CodeT5+ Evaluation (CPU)")

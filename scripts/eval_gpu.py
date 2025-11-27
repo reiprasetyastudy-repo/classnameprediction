@@ -72,8 +72,8 @@ def main():
     ap.add_argument('--batch-size', type=int, default=None, help='Batch size (default: 16 for GPU, 8 for CPU)')
     args = ap.parse_args()
 
-    # Setup logger
-    logger = setup_logger_with_tqdm('eval_gpu')
+    # Setup logger - save to logs/codet5/ directory
+    logger = setup_logger_with_tqdm('eval_gpu', log_dir='logs/codet5')
     start_time = time.time()
 
     log_section(logger, "CodeT5+ Evaluation with GPU Support")
