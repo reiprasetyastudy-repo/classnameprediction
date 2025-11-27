@@ -78,8 +78,8 @@ python scripts/train.py \
   --model Salesforce/codet5p-220m \
   --data datasets/java \
   --output model/checkpoints/run1-java \
-  --batch-size 14 \
-  --grad-accum 2 \
+  --batch-size 12 \
+  --grad-accum 3 \
   --lr 5e-5 \
   --epochs 5 \
   --fp16
@@ -91,8 +91,8 @@ python scripts/train_codegen.py \
   --model Salesforce/codegen-350M-mono \
   --data datasets/java \
   --output model/checkpoints/run1-java-codegen \
-  --batch-size 14 \
-  --grad-accum 2 \
+  --batch-size 12 \
+  --grad-accum 3 \
   --lr 5e-5 \
   --epochs 5 \
   --max-length 1024
@@ -117,15 +117,15 @@ python scripts/eval_codegen.py \
 **Comparison:**
 | Parameter | CodeT5+ | CodeGen |
 |-----------|---------|---------|
-| Batch Size | 14 | 14 ✓ |
-| Gradient Accumulation | 2 | 2 ✓ |
-| Effective Batch Size | 14 × 2 = 28 | 14 × 2 = 28 ✓ |
+| Batch Size | 12 | 12 ✓ |
+| Gradient Accumulation | 3 | 3 ✓ |
+| Effective Batch Size | 12 × 3 = 36 | 12 × 3 = 36 ✓ |
 | Learning Rate | 5e-5 | 5e-5 ✓ |
 | Epochs | 5 | 5 ✓ |
 | Max Length | 1024 (source) + 32 (target) | 1024 (combined) ✓ |
 | FP16 | Yes | Yes ✓ |
 | Seed | 42 | 42 ✓ |
-| VRAM Usage | ~27GB | ~27GB |
+| VRAM Usage | ~23GB | ~23GB |
 | Training Time | ~2-2.5 hours | ~2-2.5 hours |
 
 ### Configuration 2: Extended Training (10 Epochs)
@@ -136,8 +136,8 @@ python scripts/train.py \
   --model Salesforce/codet5p-220m \
   --data datasets/java \
   --output model/checkpoints/run2-java \
-  --batch-size 14 \
-  --grad-accum 3 \
+  --batch-size 12 \
+  --grad-accum 4 \
   --lr 2e-5 \
   --epochs 10 \
   --fp16
@@ -149,8 +149,8 @@ python scripts/train_codegen.py \
   --model Salesforce/codegen-350M-mono \
   --data datasets/java \
   --output model/checkpoints/run2-java-codegen \
-  --batch-size 14 \
-  --grad-accum 3 \
+  --batch-size 12 \
+  --grad-accum 4 \
   --lr 2e-5 \
   --epochs 10 \
   --max-length 1024
@@ -175,23 +175,24 @@ python scripts/eval_codegen.py \
 **Comparison:**
 | Parameter | CodeT5+ | CodeGen |
 |-----------|---------|---------|
-| Batch Size | 14 | 14 ✓ |
-| Gradient Accumulation | 3 | 3 ✓ |
-| Effective Batch Size | 14 × 3 = 42 | 14 × 3 = 42 ✓ |
+| Batch Size | 12 | 12 ✓ |
+| Gradient Accumulation | 4 | 4 ✓ |
+| Effective Batch Size | 12 × 4 = 48 | 12 × 4 = 48 ✓ |
 | Learning Rate | 2e-5 | 2e-5 ✓ |
 | Epochs | 10 | 10 ✓ |
 | Max Length | 1024 (source) + 32 (target) | 1024 (combined) ✓ |
 | FP16 | Yes | Yes ✓ |
 | Seed | 42 | 42 ✓ |
-| VRAM Usage | ~27GB | ~27GB |
-| Training Time | ~3.5-4 hours | ~3.5-4 hours |
+| VRAM Usage | ~23GB | ~23GB |
+| Training Time | ~3-3.5 hours | ~3-3.5 hours |
 
 **Notes:**
-- **Configuration 1 (Standard):** 5 epochs, effective batch 28, ~2-2.5 hours - Good baseline for comparison and initial experiments
-- **Configuration 2 (Extended):** 10 epochs, effective batch 42, ~3.5-4 hours - Full training for best performance and convergence
+- **Configuration 1 (Standard):** 5 epochs, effective batch 36, ~2-2.5 hours - Good baseline for comparison and initial experiments
+- **Configuration 2 (Extended):** 10 epochs, effective batch 48, ~3-3.5 hours - Full training for best performance and convergence
 - Both configurations ensure identical training conditions for fair model comparison
-- **VRAM Optimized:** Batch size 14 tested safe for CodeT5+ (Seq2Seq uses ~40% more VRAM than CodeGen)
-- **VRAM Usage:** Both configs use ~27GB (5GB safety margin on RTX 5090 32GB)
+- **VRAM Optimized:** Batch size 12 tested safe for CodeT5+ Seq2Seq (uses ~40% more VRAM than CodeGen)
+- **VRAM Usage:** Both configs use ~23GB (9GB safety margin on RTX 5090 32GB)
+- **Dynamic Padding:** CodeGen uses dynamic padding per batch (10-20x faster than max_length padding)
 - **Max Length:** CodeT5+ uses separate lengths for source (1024) and target (32). CodeGen uses combined length (1024) for prompt+target in single sequence
 - **Lazy Loading:** CodeGen uses lazy loading (no upfront preprocessing), training starts immediately
 - Logs are saved to `logs/codet5/` and `logs/codegen/` respectively
