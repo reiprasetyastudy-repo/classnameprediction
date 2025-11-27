@@ -128,24 +128,35 @@ def main():
     ap.add_argument('--epochs', type=int, default=5)
     ap.add_argument('--max-length', type=int, default=512)
     ap.add_argument('--max-steps', type=int, default=-1, help='Maximum training steps (overrides epochs if set)')
+    ap.add_argument('--seed', type=int, default=42)
 
     args = ap.parse_args()
 
     # Setup logger - save to logs/codegen/ directory
     logger = setup_logger('train_codegen', log_dir='logs/codegen')
 
-    log_section(logger, "Training Configuration")
+    log_section(logger, "CodeGen Training")
+
+    # Log GPU info if available
+    if torch.cuda.is_available():
+        logger.info(f"Using CUDA device: 0")
+        logger.info(f"GPU: {torch.cuda.get_device_name(0)}")
+    else:
+        logger.info("CUDA not available, using CPU")
+
     log_config(logger, {
         'model': args.model,
-        'data_dir': args.data,
-        'output_dir': args.output,
+        'data': args.data,
+        'output': args.output,
         'batch_size': args.batch_size,
         'gradient_accumulation_steps': args.grad_accum,
+        'effective_batch_size': args.batch_size * args.grad_accum,
         'learning_rate': args.lr,
         'epochs': args.epochs,
         'max_length': args.max_length,
         'max_steps': args.max_steps,
-        'device': 'cuda' if torch.cuda.is_available() else 'cpu'
+        'fp16': True,
+        'seed': args.seed,
     })
 
     logger.info(f"Loading tokenizer and model: {args.model}")
@@ -181,7 +192,7 @@ def main():
         num_train_epochs=args.epochs,
         max_steps=args.max_steps,
         logging_steps=10,
-        seed=42,
+        seed=args.seed,
         fp16=True,
         dataloader_num_workers=0,
         save_total_limit=2,
@@ -192,9 +203,11 @@ def main():
         eval_accumulation_steps=1, # Pindahkan ke CPU setiap 1 step
     )
 
-    logger.info(f"Effective batch size: {args.batch_size * args.grad_accum}")
+    log_section(logger, "Training Strategy")
     logger.info(f"Evaluation every {training_args.eval_steps} steps")
     logger.info(f"Save checkpoint every {training_args.save_steps} steps")
+    logger.info("Gradient checkpointing enabled for memory efficiency")
+    logger.info("FP16 mixed precision enabled")
 
     trainer = Trainer(
         model=model,
@@ -205,8 +218,9 @@ def main():
         preprocess_logits_for_metrics=preprocess_logits_for_metrics, # Inject fungsi hemat memori
     )
 
-    log_section(logger, "Starting Training (Optimized for 12GB VRAM)")
-    logger.info("Training with gradient checkpointing and FP16 mixed precision")
+    log_section(logger, "Starting Training")
+    logger.info(f"Total training samples: {len(train_dataset)}")
+    logger.info(f"Total validation samples: {len(val_dataset)}")
 
     try:
         trainer.train()
