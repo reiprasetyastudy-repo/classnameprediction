@@ -60,6 +60,45 @@ Name:
 
 ## Train CodeGen (Memory-Optimized for 12GB-32GB VRAM)
 
+### Recommended Configuration (Fair Comparison with CodeT5+)
+
+For direct comparison with CodeT5+, use this configuration on RTX 5090 or similar 32GB+ VRAM:
+
+**Java Dataset:**
+```bash
+python scripts/train_codegen.py \
+  --model Salesforce/codegen-350M-mono \
+  --data datasets/java \
+  --output model/checkpoints/run1-java-codegen \
+  --batch-size 4 \
+  --grad-accum 4 \
+  --lr 5e-5 \
+  --epochs 3
+```
+
+**Python Dataset:**
+```bash
+python scripts/train_codegen.py \
+  --model Salesforce/codegen-350M-mono \
+  --data datasets/python \
+  --output model/checkpoints/run1-python-codegen \
+  --batch-size 4 \
+  --grad-accum 4 \
+  --lr 5e-5 \
+  --epochs 3
+```
+
+**Configuration details:**
+- Effective batch size: 4 × 4 = 16 (same as CodeT5+: 8 × 2 = 16)
+- Learning rate: 5e-5 (same as CodeT5+)
+- Epochs: 3 (same as CodeT5+)
+- FP16: Enabled automatically on CUDA
+- Gradient checkpointing: Enabled by default
+- Max sequence length: 512 tokens
+- Seed: 42 (for reproducibility)
+
+This ensures fair comparison between CodeGen and CodeT5+ models with equivalent training conditions.
+
 ### For 12GB VRAM (e.g., RTX 3060, RTX 4060 Ti)
 
 **Python Dataset:**
