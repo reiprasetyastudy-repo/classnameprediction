@@ -58,41 +58,132 @@ Predict class name:
 Name:
 ```
 
-## Train CodeGen
+## Train CodeGen (Memory-Optimized for 12GB-32GB VRAM)
 
-### Python Dataset (CPU - slower but universal)
+### For 12GB VRAM (e.g., RTX 3060, RTX 4060 Ti)
+
+**Python Dataset:**
 ```bash
 python scripts/train_codegen.py \
   --model Salesforce/codegen-350M-mono \
   --data datasets/python \
   --output model/checkpoints/run1-python-codegen \
-  --batch-size 1 \
-  --grad-accum 8 \
-  --max-source-len 256 \
-  --gradient-checkpointing \
-  --cpu
+  --batch-size 2 \
+  --grad-accum 16 \
+  --lr 2e-5 \
+  --epochs 5
 ```
 
-### Java Dataset with GPU (recommended - much faster)
+**Java Dataset:**
 ```bash
 python scripts/train_codegen.py \
   --model Salesforce/codegen-350M-mono \
   --data datasets/java \
   --output model/checkpoints/run1-java-codegen \
-  --batch-size 4 \
+  --batch-size 2 \
+  --grad-accum 16 \
+  --lr 2e-5 \
+  --epochs 5
+```
+
+- Effective batch size: 2 × 16 = 32
+- Training speed: ~3-4 hours for 275K samples
+
+### For 24GB VRAM (e.g., RTX 3090, RTX 4090)
+
+**Recommended (balanced speed and stability):**
+```bash
+python scripts/train_codegen.py \
+  --model Salesforce/codegen-350M-mono \
+  --data datasets/java \
+  --output model/checkpoints/run1-java-codegen \
+  --batch-size 6 \
+  --grad-accum 8 \
+  --lr 2e-5 \
+  --epochs 5
+```
+
+- Effective batch size: 6 × 8 = 48
+- Training speed: ~1.5-2 hours for 275K samples
+- Better gradient stability than 12GB setup
+
+### For 32GB+ VRAM (e.g., RTX 5090, A6000, A100)
+
+**Option 1: Maximum Throughput (fastest training):**
+```bash
+python scripts/train_codegen.py \
+  --model Salesforce/codegen-350M-mono \
+  --data datasets/java \
+  --output model/checkpoints/run1-java-codegen \
+  --batch-size 12 \
   --grad-accum 4 \
-  --max-source-len 512 \
-  --gradient-checkpointing \
-  --fp16
+  --lr 2e-5 \
+  --epochs 5
+```
+
+- Effective batch size: 12 × 4 = 48
+- Training speed: ~45-60 minutes for 275K samples
+- **Best for**: Fast iteration, rapid experimentation
+
+**Option 2: Larger Effective Batch (best convergence):**
+```bash
+python scripts/train_codegen.py \
+  --model Salesforce/codegen-350M-mono \
+  --data datasets/java \
+  --output model/checkpoints/run1-java-codegen \
+  --batch-size 8 \
+  --grad-accum 8 \
+  --lr 2e-5 \
+  --epochs 5
+```
+
+- Effective batch size: 8 × 8 = 64
+- Training speed: ~1-1.5 hours for 275K samples
+- **Best for**: Smooth convergence, production models
+
+**Option 3: Maximum Batch Size (ultra-stable gradients):**
+```bash
+python scripts/train_codegen.py \
+  --model Salesforce/codegen-350M-mono \
+  --data datasets/java \
+  --output model/checkpoints/run1-java-codegen \
+  --batch-size 10 \
+  --grad-accum 10 \
+  --lr 2e-5 \
+  --epochs 5
+```
+
+- Effective batch size: 10 × 10 = 100
+- Training speed: ~1.5 hours for 275K samples
+- **Best for**: Most stable training, minimal noise in loss curve
+
+### Monitoring GPU Memory
+
+To monitor GPU usage during training:
+```bash
+watch -n 0.5 nvidia-smi
+```
+
+Or in another terminal:
+```bash
+nvidia-smi dmon -s mu
 ```
 
 **CodeGen Training Options:**
-- `--cpu`: Force CPU training (slower but works everywhere)
-- `--fp16`: Use FP16 mixed precision on CUDA GPUs (faster, less memory)
-- `--bf16`: Use BF16 mixed precision for Apple Silicon/MPS
-- `--gradient-checkpointing`: Save memory at cost of ~20% speed
-- `--batch-size N`: Samples per GPU (reduce if OOM)
+- `--batch-size N`: Per-device batch size (adjust based on VRAM: 2 for 12GB, 6-8 for 24GB, 8-12 for 32GB+)
 - `--grad-accum N`: Gradient accumulation steps (effective batch = batch-size × grad-accum)
+- `--lr`: Learning rate (default: 2e-5)
+- `--epochs`: Number of training epochs (default: 5)
+- `--max-length`: Maximum sequence length (default: 512)
+- `--max-steps`: Maximum training steps (overrides epochs if set, default: -1)
+
+**Features:**
+- Automatic FP16 mixed precision for CUDA GPUs (~50% memory savings)
+- Gradient checkpointing enabled by default (~40% memory savings)
+- Memory-optimized evaluation with `eval_accumulation_steps=1`
+- Preprocessing logits for metrics (saves GBs during eval)
+- Evaluation every 100 steps, checkpoint save every 200 steps
+- Scalable from 12GB to 80GB+ VRAM without code changes
 
 ## Evaluate
 
@@ -131,23 +222,78 @@ python scripts/eval_gpu.py \
 
 ## Evaluate CodeGen
 
-### Python Dataset
+Evaluate trained CodeGen model on validation set with comprehensive metrics:
+
 ```bash
 python scripts/eval_codegen.py \
-  --ckpt model/checkpoints/run1-python-codegen \
-  --data datasets/python \
-  --k 5
+  --model model/checkpoints/run1-python-codegen \
+  --valid-data datasets/python/valid.jsonl \
+  --output-dir evaluation/results
 ```
 
-### Java Dataset (GPU auto-detected)
+**Evaluation Options:**
+- `--model`: Path to trained model checkpoint
+- `--valid-data`: Path to validation JSONL file
+- `--max-length`: Maximum sequence length (default: 512)
+- `--num-samples`: Number of samples to evaluate (default: None = all)
+- `--output-dir`: Directory to save evaluation results (default: ./evaluation_results)
+
+**Output Files:**
+- `evaluation_predictions_{timestamp}.jsonl`: Detailed per-sample predictions
+- `evaluation_summary_{timestamp}.json`: Summary metrics in JSON format
+- `evaluation_report_{timestamp}.txt`: Human-readable report with examples
+
+**Metrics Computed:**
+- Token-level accuracy (based on forward pass logits)
+- Exact match accuracy (based on generated predictions)
+- Per-sample predictions with match status
+- Language and repository statistics
+
+## Test CodeGen
+
+Run comprehensive testing on test set with full metrics including Top-K accuracy and edit distance:
+
 ```bash
-python scripts/eval_codegen.py \
-  --ckpt model/checkpoints/run1-java-codegen \
-  --data datasets/java \
-  --k 5
+python scripts/test_codegen.py \
+  --model model/checkpoints/run1-python-codegen \
+  --test-data datasets/python/test.jsonl \
+  --output-dir test/results
 ```
 
-CodeGen evaluation automatically uses GPU if available (CUDA or MPS), falling back to CPU otherwise.
+**Test with Top-K Predictions** (slower but more comprehensive):
+```bash
+python scripts/test_codegen.py \
+  --model model/checkpoints/run1-python-codegen \
+  --test-data datasets/python/test.jsonl \
+  --enable-topk \
+  --k 5 \
+  --output-dir test/results
+```
+
+**Test Options:**
+- `--model`: Path to trained model checkpoint
+- `--test-data`: Path to test JSONL file
+- `--max-length`: Maximum sequence length (default: 512)
+- `--num-samples`: Number of samples to test (default: None = all)
+- `--output-dir`: Directory to save test results (default: ./test_results)
+- `--batch-size`: Batch size for inference (default: 1)
+- `--k`: Top-k for accuracy calculation (default: 5)
+- `--enable-topk`: Enable top-k predictions generation (slower)
+
+**Output Files:**
+- `test_predictions_{timestamp}.jsonl`: Detailed predictions with source/target/predicted
+- `test_summary_{timestamp}.json`: Comprehensive metrics in JSON format
+- `test_report_{timestamp}.txt`: Human-readable report with statistics
+
+**Comprehensive Metrics:**
+- **Basic Metrics**: Exact Match, Exact Match (Case Insensitive), Top-K Accuracy
+- **Edit Distance**: Average, Min, Max, Std Dev, Median Levenshtein distance
+- **Traditional ML Metrics**: Precision, Recall, F1-Score (sklearn)
+- **Statistical Analysis**: Prediction length, target length, class distribution
+- **Language-wise Performance**: Per-language accuracy breakdown
+- **Performance Stats**: Elapsed time, samples per second
+
+CodeGen evaluation and testing automatically use GPU if available (CUDA), falling back to CPU otherwise.
 
 Produces: `model/metrics/run1-python/metrics.json` with exact match, case-insensitive EM, top-k accuracy, and average Levenshtein distance.
 

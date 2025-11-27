@@ -1,251 +1,382 @@
 #!/usr/bin/env python
 """
-Evaluate a fine-tuned CodeGen checkpoint on class name prediction.
-
-Inputs:
-  --ckpt: Path to model checkpoint directory (e.g., run1-python-codegen/checkpoint-5000)
-  --data: Path to JSONL file or directory containing test.jsonl
-  --k: Top-k to compute. Default: 5
-
-Outputs:
-  model/metrics/<run>/metrics.json with EM, EM_ci, avg_levenshtein, topk accuracy
-  logs/eval_codegen_YYYYMMDD_HHMMSS.log with detailed execution log
+Evaluation Script - FIXED VERSION with Output Saving and Logging
+Compatible with Training Format
 """
-import argparse
+
 import json
-import os
-from pathlib import Path
-from typing import List, Dict
-import time
-
-import datasets as hfds
-from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch
+import numpy as np
+import os
+from datetime import datetime
+from transformers import AutoTokenizer, AutoModelForCausalLM
+from torch.utils.data import Dataset
 from tqdm import tqdm
-from rapidfuzz.distance import Levenshtein
+from logger_utils import setup_logger, log_section, log_config, log_metrics
 
-from logger_utils import setup_logger_with_tqdm, log_section, log_config, log_metrics
+class EvalDataset(Dataset):
+    def __init__(self, dataset, tokenizer, max_length=512, logger=None):
+        self.tokenizer = tokenizer
+        self.max_length = max_length
+        self.samples = []
 
+        if logger:
+            logger.info(f"Preprocessing {len(dataset)} evaluation samples...")
 
-PROMPT = "Predict class name:\n{source}\nName:"
+        for item in dataset:
+            source = item['source']
+            target = item['target']
 
+            if not source or not target:
+                continue
 
-def load_test(path: str):
-    if os.path.isdir(path):
-        file = os.path.join(path, 'test.jsonl')
-    else:
-        file = path
-    ds = hfds.load_dataset('json', data_files={'test': file})
-    return ds['test']
+            # Format yang sama dengan training
+            prompt_text = f"{source}\nClass name:"
+            full_text = prompt_text + f" {target}<|endoftext|>"
 
+            encoding = tokenizer(
+                full_text,
+                max_length=self.max_length,
+                truncation=True,
+                padding="max_length",
+                return_tensors="pt"
+            )
 
-def generate(model, tokenizer, sources: List[str], max_new_tokens=16, num_return_sequences=5):
-    inputs = tokenizer(sources, return_tensors='pt', padding=True, truncation=True, max_length=1024)
-    input_ids = inputs['input_ids']
-    attention_mask = inputs.get('attention_mask', None)
-    input_ids = input_ids.to(model.device)
-    if attention_mask is not None:
-        attention_mask = attention_mask.to(model.device)
-    
+            prompt_encoding = tokenizer(
+                prompt_text,
+                max_length=self.max_length,
+                truncation=True,
+                add_special_tokens=False,
+                return_tensors="pt"
+            )
+            prompt_len = prompt_encoding['input_ids'].shape[1]
+
+            input_ids = encoding['input_ids'][0]
+            attention_mask = encoding['attention_mask'][0]
+            labels = input_ids.clone()
+
+            # Mask prompt part seperti di training
+            if prompt_len < len(labels):
+                labels[:prompt_len] = -100
+
+            labels[attention_mask == 0] = -100
+
+            sample = {
+                'input_ids': input_ids,
+                'attention_mask': attention_mask,
+                'labels': labels,
+                'source_text': source,
+                'target_text': target,
+                'language': item.get('language', 'unknown'),
+                'repo': item.get('repo', 'unknown')
+            }
+            self.samples.append(sample)
+
+        if logger:
+            logger.info(f"Preprocessing complete: {len(self.samples)} valid samples")
+
+    def __len__(self):
+        return len(self.samples)
+
+    def __getitem__(self, idx):
+        return self.samples[idx]
+
+def load_validation_data(valid_data_path, logger):
+    """Load validation data from JSONL"""
+    logger.info(f"Loading validation data from {valid_data_path}")
+    samples = []
+    with open(valid_data_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            samples.append(json.loads(line.strip()))
+    logger.info(f"Loaded {len(samples)} validation samples")
+    return samples
+
+def generate_prediction(model, tokenizer, source_text, device, max_length=512):
+    """Generate prediction for a single sample - FIXED VERSION"""
+    prompt = f"{source_text}\nClass name:"
+
+    inputs = tokenizer(
+        prompt,
+        return_tensors="pt",
+        truncation=True,
+        max_length=max_length,
+        padding=True,
+        add_special_tokens=True
+    )
+
+    # FIX: Ensure attention mask is properly set
+    if 'attention_mask' not in inputs:
+        inputs['attention_mask'] = torch.ones_like(inputs['input_ids'])
+
     with torch.no_grad():
+        # FIX: Use simpler generation without problematic parameters
         outputs = model.generate(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            max_new_tokens=max_new_tokens,
-            num_beams=num_return_sequences,
-            num_return_sequences=num_return_sequences,
+            inputs.input_ids.to(device),
+            attention_mask=inputs.attention_mask.to(device),
+            max_new_tokens=20,
+            num_return_sequences=1,
             do_sample=False,
-            pad_token_id=tokenizer.eos_token_id,  # Important for CodeGen
+            pad_token_id=tokenizer.eos_token_id,
+            eos_token_id=tokenizer.eos_token_id,
+            early_stopping=True
         )
-    
-    texts = tokenizer.batch_decode(outputs, skip_special_tokens=True)
-    # group by sequences per input
-    grouped = [texts[i:i+num_return_sequences] for i in range(0, len(texts), num_return_sequences)]
-    return grouped
 
+    # FIX: outputs is already a tensor, not a dictionary
+    generated = tokenizer.decode(outputs[0], skip_special_tokens=False)
 
-def extract_prediction(text: str, original_prompt: str) -> str:
-    """
-    Extract the prediction from generated text by removing the original prompt.
-    For CodeGen models, we need to handle this carefully.
-    """
-    # Remove the original prompt to get just the generated part
-    if text.startswith(original_prompt):
-        prediction = text[len(original_prompt):].strip()
+    # Extract prediction after "Class name:"
+    if "Class name:" in generated:
+        prediction_part = generated.split("Class name:")[-1]
+        # Clean up the prediction
+        prediction = prediction_part.split('<|endoftext|>')[0].strip()
+        prediction = prediction.rstrip('.:;,\n\t').strip()
+
+        # If prediction contains newlines, take only the first line
+        if '\n' in prediction:
+            prediction = prediction.split('\n')[0].strip()
     else:
-        # If for some reason the prompt isn't at start, try to find the last "Name:" part
-        if "Name:" in text:
-            parts = text.split("Name:")
-            if len(parts) > 1:
-                prediction = parts[-1].strip()
-            else:
-                prediction = text.strip()
-        else:
-            prediction = text.strip()
-    
-    # Take only the first token/word as the class name prediction
-    prediction = prediction.split()[0] if prediction else ""
+        # Fallback: try to extract from the end
+        prediction = generated.replace(prompt, "").strip()
+        prediction = prediction.split('<|endoftext|>')[0].strip()
+        prediction = prediction.rstrip('.:;,\n\t').strip()
+
     return prediction
 
+def save_evaluation_results(results, output_dir, model_path, valid_data_path, logger):
+    """Save evaluation results to files"""
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument('--ckpt', type=str, required=True,
-                   help='Path to model checkpoint directory (e.g., run1-python-codegen/checkpoint-5000)')
-    ap.add_argument('--data', type=str, required=True,
-                   help='Path to JSONL file or directory containing test.jsonl')
-    ap.add_argument('--k', type=int, default=5,
-                   help='Top-k to compute')
-    args = ap.parse_args()
+    # Create output directory if it doesn't exist
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Create timestamp for filename
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    # Save detailed predictions
+    predictions_file = os.path.join(output_dir, f"evaluation_predictions_{timestamp}.jsonl")
+    logger.info(f"Saving detailed predictions to {predictions_file}")
+    with open(predictions_file, 'w', encoding='utf-8') as f:
+        for pred in results['predictions']:
+            f.write(json.dumps(pred, ensure_ascii=False) + '\n')
+
+    # Save summary results
+    summary_file = os.path.join(output_dir, f"evaluation_summary_{timestamp}.json")
+    summary = {
+        'timestamp': timestamp,
+        'model_path': model_path,
+        'validation_data_path': valid_data_path,
+        'token_accuracy': results['token_accuracy'],
+        'exact_match_accuracy': results['exact_match_accuracy'],
+        'total_samples': results['total_samples'],
+        'correct_exact_matches': results['correct_exact_matches'],
+        'evaluation_details': {
+            'token_accuracy_percentage': f"{results['token_accuracy']:.2%}",
+            'exact_match_accuracy_percentage': f"{results['exact_match_accuracy']:.2%}",
+            'correct_vs_total': f"{results['correct_exact_matches']}/{results['total_samples']}"
+        }
+    }
+
+    logger.info(f"Saving summary to {summary_file}")
+    with open(summary_file, 'w', encoding='utf-8') as f:
+        json.dump(summary, f, indent=2, ensure_ascii=False)
+
+    # Save human-readable report
+    report_file = os.path.join(output_dir, f"evaluation_report_{timestamp}.txt")
+    logger.info(f"Saving report to {report_file}")
+    with open(report_file, 'w', encoding='utf-8') as f:
+        f.write("=" * 70 + "\n")
+        f.write("MODEL EVALUATION REPORT\n")
+        f.write("=" * 70 + "\n")
+        f.write(f"Evaluation Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        f.write(f"Model: {model_path}\n")
+        f.write(f"Validation Data: {valid_data_path}\n")
+        f.write(f"Total Samples: {results['total_samples']}\n")
+        f.write("\n" + "=" * 70 + "\n")
+        f.write("EVALUATION RESULTS\n")
+        f.write("=" * 70 + "\n")
+        f.write(f"Token-level Accuracy: {results['token_accuracy']:.4f} ({results['token_accuracy']:.2%})\n")
+        f.write(f"Exact Match Accuracy: {results['exact_match_accuracy']:.4f} ({results['exact_match_accuracy']:.2%})\n")
+        f.write(f"Correct/Total: {results['correct_exact_matches']}/{results['total_samples']}\n")
+
+        f.write("\n" + "=" * 70 + "\n")
+        f.write("SAMPLE PREDICTIONS\n")
+        f.write("=" * 70 + "\n")
+
+        for i, pred in enumerate(results['predictions'][:10]):  # Show first 10
+            f.write(f"\n--- Sample {i+1} ---\n")
+            f.write(f"Expected: '{pred['target']}'\n")
+            f.write(f"Predicted: '{pred['predicted']}'\n")
+            f.write(f"Match: {pred['match']}\n")
+            f.write(f"Language: {pred.get('language', 'unknown')}\n")
+            f.write(f"Repo: {pred.get('repo', 'unknown')}\n")
+
+            source_preview = pred['source'][:200] + '...' if len(pred['source']) > 200 else pred['source']
+            f.write(f"Source preview: {source_preview}\n")
+
+    logger.info("Evaluation results saved successfully")
+
+    return {
+        'predictions_file': predictions_file,
+        'summary_file': summary_file,
+        'report_file': report_file
+    }
+
+def compute_validation_metrics(model, eval_dataset, device, tokenizer, logger):
+    """Compute metrics on validation set"""
+    model.eval()
+    total_tokens = 0
+    correct_tokens = 0
+    exact_matches = 0
+    all_predictions = []
+
+    logger.info("Running validation evaluation...")
+
+    with torch.no_grad():
+        for idx, batch in enumerate(tqdm(eval_dataset, desc="Evaluating")):
+            input_ids = batch['input_ids'].unsqueeze(0).to(device)
+            attention_mask = batch['attention_mask'].unsqueeze(0).to(device)
+            labels = batch['labels'].unsqueeze(0).to(device)
+
+            # Forward pass untuk token accuracy
+            outputs = model(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                labels=labels
+            )
+
+            # Token-level accuracy
+            logits = outputs.logits
+            pred_ids = logits.argmax(dim=-1)
+
+            mask = labels != -100
+            valid_labels = labels[mask]
+            valid_preds = pred_ids[mask]
+
+            correct_tokens += (valid_preds == valid_labels).sum().item()
+            total_tokens += mask.sum().item()
+
+            # Exact match prediction menggunakan generation
+            source_text = batch['source_text']
+            target_text = batch['target_text']
+
+            predicted_text = generate_prediction(model, tokenizer, source_text, device)
+
+            all_predictions.append({
+                'source': source_text,
+                'target': target_text,
+                'predicted': predicted_text,
+                'match': predicted_text.strip().lower() == target_text.strip().lower(),
+                'language': batch.get('language', 'unknown'),
+                'repo': batch.get('repo', 'unknown'),
+                'timestamp': datetime.now().isoformat()
+            })
+
+            if predicted_text.strip().lower() == target_text.strip().lower():
+                exact_matches += 1
+
+            if (idx + 1) % 1000 == 0:
+                logger.info(f"Evaluated {idx + 1}/{len(eval_dataset)} samples")
+
+    token_accuracy = correct_tokens / total_tokens if total_tokens > 0 else 0
+    exact_match_accuracy = exact_matches / len(eval_dataset) if len(eval_dataset) > 0 else 0
+
+    logger.info(f"Token accuracy: {token_accuracy:.4f}")
+    logger.info(f"Exact match accuracy: {exact_match_accuracy:.4f}")
+    logger.info(f"Exact matches: {exact_matches}/{len(eval_dataset)}")
+
+    return {
+        'token_accuracy': token_accuracy,
+        'exact_match_accuracy': exact_match_accuracy,
+        'total_samples': len(eval_dataset),
+        'correct_exact_matches': exact_matches,
+        'predictions': all_predictions
+    }
+
+def evaluate_model(model_path, valid_data_path, max_length=512, num_samples=None, output_dir="./evaluation_results"):
+    """Main evaluation function"""
 
     # Setup logger
-    logger = setup_logger_with_tqdm('eval_codegen')
-    start_time = time.time()
+    logger = setup_logger('eval_codegen', output_dir)
 
-    log_section(logger, "CodeGen Evaluation")
+    log_section(logger, "Evaluation Configuration")
+    log_config(logger, {
+        'model_path': model_path,
+        'valid_data_path': valid_data_path,
+        'max_length': max_length,
+        'num_samples': num_samples if num_samples else 'all',
+        'output_dir': output_dir
+    })
 
-    print(f"Loading model from: {args.ckpt}")
-    logger.info(f"Loading model from: {args.ckpt}")
+    logger.info(f"Loading model from {model_path}...")
+    tokenizer = AutoTokenizer.from_pretrained(model_path)
+    model = AutoModelForCausalLM.from_pretrained(model_path)
 
-    # Load tokenizer and model for CodeGen
-    tokenizer = AutoTokenizer.from_pretrained(args.ckpt)
-    model = AutoModelForCausalLM.from_pretrained(args.ckpt)
-    logger.info("Model and tokenizer loaded")
-
-    # Add padding token if it doesn't exist
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
-        logger.info("Set pad_token to eos_token")
 
-    model.eval()
-
-    # Use GPU if available
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
-    print(f"Using device: {device}")
-    if device.type == 'cuda':
-        logger.info(f"Using device: {device} - {torch.cuda.get_device_name(0)}")
+
+    logger.info(f"Using device: {device}")
+
+    # Load validation data
+    valid_data = load_validation_data(valid_data_path, logger)
+
+    if num_samples and num_samples < len(valid_data):
+        valid_data = valid_data[:num_samples]
+        logger.info(f"Using {num_samples} samples for evaluation")
     else:
-        logger.info(f"Using device: {device}")
+        logger.info(f"Using all {len(valid_data)} samples for evaluation")
 
-    ds = load_test(args.data)
-    print(f"Loaded test dataset with {len(ds)} examples")
-    logger.info(f"Loaded test dataset with {len(ds)} examples")
+    # Create eval dataset
+    log_section(logger, "Dataset Preprocessing")
+    eval_dataset = EvalDataset(valid_data, tokenizer, max_length, logger)
 
-    # Log configuration
-    config = {
-        'checkpoint': args.ckpt,
-        'data': args.data,
-        'k': args.k,
-        'device': str(device),
-        'batch_size': 4,
-    }
-    log_config(logger, config)
+    # Compute metrics
+    log_section(logger, "Running Evaluation")
+    results = compute_validation_metrics(model, eval_dataset, device, tokenizer, logger)
 
-    k = args.k
-    em = 0
-    em_ci = 0
-    topk = 0
-    lev_sum = 0.0
-    n = 0
+    # Print results to console
+    log_section(logger, "Evaluation Results")
+    logger.info(f"Token-level Accuracy: {results['token_accuracy']:.4f} ({results['token_accuracy']:.2%})")
+    logger.info(f"Exact Match Accuracy: {results['exact_match_accuracy']:.4f} ({results['exact_match_accuracy']:.2%})")
+    logger.info(f"Correct/Total: {results['correct_exact_matches']}/{results['total_samples']}")
 
-    # Create metrics directory
-    ckpt_name = Path(args.ckpt).name
-    parent_dir = Path(args.ckpt).parent.name
-    metrics_dir = Path('model/metrics') / parent_dir / ckpt_name
-    metrics_dir.mkdir(parents=True, exist_ok=True)
-    print(f"Metrics will be saved to: {metrics_dir}")
-    logger.info(f"Metrics will be saved to: {metrics_dir}")
+    # Show some examples
+    log_section(logger, "Sample Predictions")
+    for i, pred in enumerate(results['predictions'][:5]):  # Show first 5
+        logger.info(f"\n--- Sample {i+1} ---")
+        logger.info(f"Expected: '{pred['target']}'")
+        logger.info(f"Predicted: '{pred['predicted']}'")
+        logger.info(f"Match: {pred['match']}")
+        logger.info(f"Language: {pred.get('language', 'unknown')}")
+        logger.info(f"Repo: {pred.get('repo', 'unknown')}")
 
-    batch_size = 4  # Reduced for CodeGen-350M if GPU memory is limited
-    all_results = []
+        source_preview = pred['source'][:150] + '...' if len(pred['source']) > 150 else pred['source']
+        logger.info(f"Source preview: {source_preview}")
 
-    logger.info("Starting evaluation...")
-    logger.info(f"Total batches: {len(ds) // batch_size + (1 if len(ds) % batch_size else 0)}")
+    # Save results to files
+    log_section(logger, "Saving Results")
+    saved_files = save_evaluation_results(results, output_dir, model_path, valid_data_path, logger)
 
-    for i in tqdm(range(0, len(ds), batch_size), desc="Evaluating"):
-        batch = ds[i:i+batch_size]
-        prompts = [PROMPT.format(source=s) for s in batch['source']]
-        
-        try:
-            g = generate(model, tokenizer, prompts, num_return_sequences=k)
-            
-            for j, (preds, gold, original_prompt) in enumerate(zip(g, batch['target'], prompts)):
-                n += 1
-                
-                # Extract predictions by removing the original prompt
-                norm_preds = []
-                for pred in preds:
-                    extracted_pred = extract_prediction(pred, original_prompt)
-                    norm_preds.append(extracted_pred)
-                
-                # Store results for debugging
-                result = {
-                    'source': batch['source'][j],
-                    'target': gold,
-                    'predictions': norm_preds,
-                    'top_prediction': norm_preds[0] if norm_preds else ""
-                }
-                all_results.append(result)
-                
-                # Calculate metrics
-                if norm_preds and norm_preds[0] == gold:
-                    em += 1
-                if norm_preds and norm_preds[0].lower() == gold.lower():
-                    em_ci += 1
-                if gold in norm_preds[:k]:
-                    topk += 1
-                
-                lev = Levenshtein.distance(norm_preds[0], gold) if norm_preds and norm_preds[0] else len(gold)
-                lev_sum += float(lev)
-                
-        except Exception as e:
-            print(f"Error processing batch starting at index {i}: {e}")
-            logger.error(f"Error processing batch starting at index {i}: {e}")
-            continue
+    logger.info(f"Evaluation complete!")
 
-    # Calculate elapsed time
-    elapsed_time = time.time() - start_time
-
-    # Calculate final metrics
-    metrics = {
-        'n': n,
-        'exact_match': em / n if n else 0.0,
-        'exact_match_case_insensitive': em_ci / n if n else 0.0,
-        'topk_accuracy': topk / n if n else 0.0,
-        'avg_levenshtein': lev_sum / n if n else 0.0,
-        'k': k,
-        'model': args.ckpt,
-        'dataset': args.data,
-        'elapsed_time_seconds': elapsed_time,
-        'samples_per_second': n / elapsed_time if elapsed_time > 0 else 0,
-    }
-
-    logger.info(f"Evaluation completed in {elapsed_time:.2f} seconds")
-    logger.info(f"Average speed: {metrics['samples_per_second']:.2f} samples/second")
-
-    # Save metrics
-    metrics_file = metrics_dir / 'metrics.json'
-    metrics_file.write_text(json.dumps(metrics, indent=2), encoding='utf-8')
-    logger.info(f"Metrics saved to: {metrics_file}")
-
-    # Save detailed results for analysis
-    results_file = metrics_dir / 'detailed_results.jsonl'
-    with open(results_file, 'w', encoding='utf-8') as f:
-        for result in all_results:
-            f.write(json.dumps(result, ensure_ascii=False) + '\n')
-    logger.info(f"Detailed results saved to: {results_file}")
-
-    # Print to console (original behavior)
-    print("\n=== Evaluation Results ===")
-    print(json.dumps(metrics, indent=2))
-    print(f"\nDetailed results saved to: {results_file}")
-
-    # Also log to file
-    log_section(logger, "EVALUATION RESULTS")
-    log_metrics(logger, metrics)
-    logger.info(f"Total evaluation time: {elapsed_time:.2f} seconds ({elapsed_time/60:.2f} minutes)")
-
+    return {**results, 'saved_files': saved_files}
 
 if __name__ == '__main__':
-    main()
+    import argparse
+    parser = argparse.ArgumentParser(description='Evaluate trained model on validation set')
+    parser.add_argument('--model', type=str, required=True, help='Path to trained model')
+    parser.add_argument('--valid-data', type=str, required=True, help='Path to validation JSONL file')
+    parser.add_argument('--max-length', type=int, default=512, help='Maximum sequence length')
+    parser.add_argument('--num-samples', type=int, default=None, help='Number of samples to evaluate (None = all)')
+    parser.add_argument('--output-dir', type=str, default='./evaluation_results', help='Directory to save evaluation results')
+
+    args = parser.parse_args()
+
+    results = evaluate_model(
+        model_path=args.model,
+        valid_data_path=args.valid_data,
+        max_length=args.max_length,
+        num_samples=args.num_samples,
+        output_dir=args.output_dir
+    )

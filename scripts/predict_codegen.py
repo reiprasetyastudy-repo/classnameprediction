@@ -13,6 +13,7 @@ import argparse
 import json
 import os
 import sys
+import re
 from tqdm import tqdm
 from typing import List, Dict
 import torch
