@@ -28,7 +28,9 @@ https://github.com/pallets/flask
 https://github.com/psf/requests
 ```
 
-2) Run dataset builder (Python by default; or pass `--languages python,java`):
+2) Run dataset builder:
+
+**Python Dataset:**
 ```bash
 python scripts/build_dataset.py \
   --repos-file data/repos.txt \
@@ -36,6 +38,28 @@ python scripts/build_dataset.py \
   --out datasets \
   --mask \
   --min-lines 3
+```
+
+**Java Dataset:**
+```bash
+python scripts/build_dataset.py \
+  --repos-file data/repos_java.txt \
+  --in data \
+  --out datasets \
+  --mask \
+  --min-lines 3 \
+  --languages java
+```
+
+**Multiple Languages:**
+```bash
+python scripts/build_dataset.py \
+  --repos-file data/repos.txt \
+  --in data \
+  --out datasets \
+  --mask \
+  --min-lines 3 \
+  --languages python,java
 ```
 
 Outputs per language: `datasets/<language>/{train,valid,test}.jsonl` with fields `language, repo, path, class_span, source, target`.
