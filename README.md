@@ -67,8 +67,8 @@ python scripts/train_codegen.py \
   --model Salesforce/codegen-350M-mono \
   --data datasets/java \
   --output model/checkpoints/run1-java-codegen \
-  --batch-size 4 \
-  --grad-accum 4 \
+  --batch-size 8 \
+  --grad-accum 2 \
   --lr 5e-5 \
   --epochs 3
 ```
@@ -92,7 +92,9 @@ python scripts/eval_codegen.py \
 **Comparison:**
 | Parameter | CodeT5+ | CodeGen |
 |-----------|---------|---------|
-| Effective Batch Size | 8 × 2 = 16 | 4 × 4 = 16 ✓ |
+| Batch Size | 8 | 8 ✓ |
+| Gradient Accumulation | 2 | 2 ✓ |
+| Effective Batch Size | 8 × 2 = 16 | 8 × 2 = 16 ✓ |
 | Learning Rate | 5e-5 | 5e-5 ✓ |
 | Epochs | 3 | 3 ✓ |
 | FP16 | Yes | Yes ✓ |
@@ -144,6 +146,8 @@ python scripts/eval_codegen.py \
 **Comparison:**
 | Parameter | CodeT5+ | CodeGen |
 |-----------|---------|---------|
+| Batch Size | 8 | 8 ✓ |
+| Gradient Accumulation | 4 | 4 ✓ |
 | Effective Batch Size | 8 × 4 = 32 | 8 × 4 = 32 ✓ |
 | Learning Rate | 2e-5 | 2e-5 ✓ |
 | Epochs | 10 | 10 ✓ |
