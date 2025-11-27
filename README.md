@@ -87,7 +87,7 @@ python scripts/train_codegen.py \
 ```
 
 - Effective batch size: 2 × 16 = 32
-- Training speed: ~3-4 hours for 275K samples
+- Training speed: ~3-4 hours for 275K samples (5 epochs)
 
 ### For 24GB VRAM (e.g., RTX 3090, RTX 4090)
 
@@ -104,7 +104,7 @@ python scripts/train_codegen.py \
 ```
 
 - Effective batch size: 6 × 8 = 48
-- Training speed: ~1.5-2 hours for 275K samples
+- Training speed: ~1.5-2 hours for 275K samples (5 epochs)
 - Better gradient stability than 12GB setup
 
 ### For 32GB+ VRAM (e.g., RTX 5090, A6000, A100)
@@ -122,7 +122,7 @@ python scripts/train_codegen.py \
 ```
 
 - Effective batch size: 12 × 4 = 48
-- Training speed: ~45-60 minutes for 275K samples
+- Training speed: ~45-60 minutes for 275K samples (5 epochs)
 - **Best for**: Fast iteration, rapid experimentation
 
 **Option 2: Larger Effective Batch (best convergence):**
@@ -138,7 +138,7 @@ python scripts/train_codegen.py \
 ```
 
 - Effective batch size: 8 × 8 = 64
-- Training speed: ~1-1.5 hours for 275K samples
+- Training speed: ~1-1.5 hours for 275K samples (5 epochs)
 - **Best for**: Smooth convergence, production models
 
 **Option 3: Maximum Batch Size (ultra-stable gradients):**
@@ -154,7 +154,7 @@ python scripts/train_codegen.py \
 ```
 
 - Effective batch size: 10 × 10 = 100
-- Training speed: ~1.5 hours for 275K samples
+- Training speed: ~1.5 hours for 275K samples (5 epochs)
 - **Best for**: Most stable training, minimal noise in loss curve
 
 ### Monitoring GPU Memory
