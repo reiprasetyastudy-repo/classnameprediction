@@ -94,7 +94,8 @@ python scripts/train_codegen.py \
   --batch-size 8 \
   --grad-accum 2 \
   --lr 5e-5 \
-  --epochs 3
+  --epochs 3 \
+  --max-length 1024
 ```
 
 **Evaluation - CodeT5+:**
@@ -121,7 +122,9 @@ python scripts/eval_codegen.py \
 | Effective Batch Size | 8 × 2 = 16 | 8 × 2 = 16 ✓ |
 | Learning Rate | 5e-5 | 5e-5 ✓ |
 | Epochs | 3 | 3 ✓ |
+| Max Length | 1024 (source) + 32 (target) | 1024 (combined) ✓ |
 | FP16 | Yes | Yes ✓ |
+| Seed | 42 | 42 ✓ |
 | Training Time | ~2-3 hours | ~2-3 hours |
 
 ### Configuration 2: Extended Training (10 Epochs)
@@ -148,7 +151,8 @@ python scripts/train_codegen.py \
   --batch-size 8 \
   --grad-accum 4 \
   --lr 2e-5 \
-  --epochs 10
+  --epochs 10 \
+  --max-length 1024
 ```
 
 **Evaluation - CodeT5+:**
@@ -175,13 +179,16 @@ python scripts/eval_codegen.py \
 | Effective Batch Size | 8 × 4 = 32 | 8 × 4 = 32 ✓ |
 | Learning Rate | 2e-5 | 2e-5 ✓ |
 | Epochs | 10 | 10 ✓ |
+| Max Length | 1024 (source) + 32 (target) | 1024 (combined) ✓ |
 | FP16 | Yes | Yes ✓ |
+| Seed | 42 | 42 ✓ |
 | Training Time | ~6-8 hours | ~6-8 hours |
 
 **Notes:**
 - Configuration 1: Faster training, good for initial comparison
 - Configuration 2: Extended training, better convergence and final performance
 - Both configurations ensure identical training conditions for fair model comparison
+- **Max Length:** CodeT5+ uses separate lengths for source (1024) and target (32). CodeGen uses combined length (1024) for prompt+target in single sequence
 - Logs are saved to `logs/codet5/` and `logs/codegen/` respectively
 - All configurations use seed 42 for reproducibility
 
@@ -323,8 +330,9 @@ nvidia-smi dmon -s mu
 - `--grad-accum N`: Gradient accumulation steps (effective batch = batch-size × grad-accum)
 - `--lr`: Learning rate (default: 2e-5)
 - `--epochs`: Number of training epochs (default: 5)
-- `--max-length`: Maximum sequence length (default: 512)
+- `--max-length`: Maximum sequence length for prompt+target combined (default: 1024, matches CodeT5+ max_source_len)
 - `--max-steps`: Maximum training steps (overrides epochs if set, default: -1)
+- `--seed`: Random seed for reproducibility (default: 42)
 
 **Features:**
 - Automatic FP16 mixed precision for CUDA GPUs (~50% memory savings)

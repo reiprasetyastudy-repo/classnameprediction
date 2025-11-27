@@ -126,7 +126,7 @@ def main():
     ap.add_argument('--grad-accum', type=int, default=8)
     ap.add_argument('--lr', type=float, default=2e-5)
     ap.add_argument('--epochs', type=int, default=5)
-    ap.add_argument('--max-length', type=int, default=512)
+    ap.add_argument('--max-length', type=int, default=1024)
     ap.add_argument('--max-steps', type=int, default=-1, help='Maximum training steps (overrides epochs if set)')
     ap.add_argument('--seed', type=int, default=42)
 
