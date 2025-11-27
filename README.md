@@ -73,6 +73,22 @@ python scripts/train_codegen.py \
   --epochs 3
 ```
 
+**Evaluation - CodeT5+:**
+```bash
+python scripts/eval_gpu.py \
+  --ckpt model/checkpoints/run1-java \
+  --data datasets/java \
+  --k 5
+```
+
+**Evaluation - CodeGen:**
+```bash
+python scripts/eval_codegen.py \
+  --model model/checkpoints/run1-java-codegen \
+  --valid-data datasets/java/test.jsonl \
+  --output-dir evaluation/run1-java-codegen
+```
+
 **Comparison:**
 | Parameter | CodeT5+ | CodeGen |
 |-----------|---------|---------|
@@ -107,6 +123,22 @@ python scripts/train_codegen.py \
   --grad-accum 4 \
   --lr 2e-5 \
   --epochs 10
+```
+
+**Evaluation - CodeT5+:**
+```bash
+python scripts/eval_gpu.py \
+  --ckpt model/checkpoints/run2-java \
+  --data datasets/java \
+  --k 5
+```
+
+**Evaluation - CodeGen:**
+```bash
+python scripts/eval_codegen.py \
+  --model model/checkpoints/run2-java-codegen \
+  --valid-data datasets/java/test.jsonl \
+  --output-dir evaluation/run2-java-codegen
 ```
 
 **Comparison:**
