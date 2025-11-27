@@ -187,14 +187,14 @@ python scripts/eval_codegen.py \
 | Training Time | ~3-3.5 hours | ~3-3.5 hours |
 
 **Notes:**
-- **Configuration 1 (Standard):** 5 epochs, effective batch 36, ~2-2.5 hours - Good baseline for comparison and initial experiments
-- **Configuration 2 (Extended):** 10 epochs, effective batch 48, ~3-3.5 hours - Full training for best performance and convergence
+- **Configuration 1 (Standard):** 5 epochs, effective batch 36, ~2-2.5 hours (includes 3-5 min preprocessing) - Good baseline for comparison and initial experiments
+- **Configuration 2 (Extended):** 10 epochs, effective batch 48, ~3-3.5 hours (includes 3-5 min preprocessing) - Full training for best performance and convergence
 - Both configurations ensure identical training conditions for fair model comparison
 - **VRAM Optimized:** Batch size 12 tested safe for CodeT5+ Seq2Seq (uses ~40% more VRAM than CodeGen)
 - **VRAM Usage:** Both configs use ~23GB (9GB safety margin on RTX 5090 32GB)
-- **Dynamic Padding:** CodeGen uses dynamic padding per batch (10-20x faster than max_length padding)
+- **Optimized Preprocessing:** CodeGen preprocesses all samples once (~3-5 minutes), then training is fast. Uses batch tokenization (1000 samples/batch) for speed
+- **Dynamic Padding:** Batch-wise dynamic padding (pads to longest in batch, not max_length)
 - **Max Length:** CodeT5+ uses separate lengths for source (1024) and target (32). CodeGen uses combined length (1024) for prompt+target in single sequence
-- **Lazy Loading:** CodeGen uses lazy loading (no upfront preprocessing), training starts immediately
 - Logs are saved to `logs/codet5/` and `logs/codegen/` respectively
 - All configurations use seed 42 for reproducibility
 

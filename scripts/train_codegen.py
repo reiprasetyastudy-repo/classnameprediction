@@ -31,52 +31,72 @@ def load_dataset(data_dir: str, logger):
     return ds
 
 class MaskedClassNameDataset(Dataset):
-    """Lazy loading dataset with dynamic padding - tokenizes on-the-fly"""
+    """Eager preprocessing with optimized memory - preprocess once, train fast"""
     def __init__(self, dataset, tokenizer, max_length, logger):
-        self.dataset = dataset
         self.tokenizer = tokenizer
         self.max_length = max_length
-        logger.info(f"Dataset initialized with {len(dataset)} samples (lazy loading + dynamic padding)")
+        self.samples = []
+
+        logger.info(f"Preprocessing {len(dataset)} samples (optimized eager loading)...")
+
+        # Batch processing for speed
+        batch_size = 1000
+        for i in range(0, len(dataset), batch_size):
+            batch = dataset[i:min(i+batch_size, len(dataset))]
+
+            # Prepare texts
+            full_texts = []
+            prompt_texts = []
+
+            for item in batch:
+                source = item['source']
+                target = item['target']
+                prompt_text = f"{source}\nClass name:"
+                full_text = prompt_text + f" {target}<|endoftext|>"
+                full_texts.append(full_text)
+                prompt_texts.append(prompt_text)
+
+            # Batch tokenization (much faster!)
+            full_encodings = tokenizer(
+                full_texts,
+                max_length=max_length,
+                truncation=True,
+                # No padding - store dynamic length
+            )
+
+            prompt_encodings = tokenizer(
+                prompt_texts,
+                max_length=max_length,
+                truncation=True,
+                add_special_tokens=False,
+            )
+
+            # Process each sample
+            for j in range(len(full_texts)):
+                input_ids = full_encodings['input_ids'][j]
+                prompt_len = len(prompt_encodings['input_ids'][j])
+
+                # Create labels: mask prompt part
+                labels = input_ids.copy()
+                if prompt_len < len(labels):
+                    labels[:prompt_len] = [-100] * prompt_len
+
+                # Store as lists (not tensors) to save RAM
+                self.samples.append({
+                    'input_ids': input_ids,
+                    'labels': labels
+                })
+
+            if (i + batch_size) % 10000 == 0 or (i + batch_size) >= len(dataset):
+                logger.info(f"Preprocessed {min(i + batch_size, len(dataset))}/{len(dataset)} samples")
+
+        logger.info(f"Preprocessing complete: {len(self.samples)} samples ready")
 
     def __len__(self):
-        return len(self.dataset)
+        return len(self.samples)
 
     def __getitem__(self, idx):
-        item = self.dataset[idx]
-        source = item['source']
-        target = item['target']
-
-        prompt_text = f"{source}\nClass name:"
-        full_text = prompt_text + f" {target}<|endoftext|>"
-
-        # Tokenize full text WITHOUT padding (dynamic length)
-        full_encoding = self.tokenizer(
-            full_text,
-            max_length=self.max_length,
-            truncation=True,
-            # NO PADDING - will be padded by DataCollator per batch
-        )
-
-        input_ids = full_encoding['input_ids']
-
-        # Tokenize prompt to get length
-        prompt_encoding = self.tokenizer(
-            prompt_text,
-            max_length=self.max_length,
-            truncation=True,
-            add_special_tokens=False,
-        )
-        prompt_len = len(prompt_encoding['input_ids'])
-
-        # Create labels: mask prompt part with -100
-        labels = input_ids.copy()
-        if prompt_len < len(labels):
-            labels[:prompt_len] = [-100] * prompt_len
-
-        return {
-            'input_ids': input_ids,
-            'labels': labels
-        }
+        return self.samples[idx]
 
 
 # Custom DataCollator for dynamic padding
@@ -201,7 +221,7 @@ def main():
     logger.info("Loading dataset...")
     ds = load_dataset(args.data, logger)
 
-    log_section(logger, "Dataset Initialization")
+    log_section(logger, "Dataset Preprocessing")
     train_dataset = MaskedClassNameDataset(ds['train'], tokenizer, args.max_length, logger)
     val_dataset = MaskedClassNameDataset(ds['validation'], tokenizer, args.max_length, logger)
 
