@@ -126,7 +126,9 @@ python scripts/eval_codegen.py \
 | FP16 | Yes | Yes ✓ |
 | Seed | 42 | 42 ✓ |
 | VRAM Usage | ~23GB | ~23GB |
-| Training Time | ~2-2.5 hours | ~2-2.5 hours |
+| Training Time | ~2-2.5 hours | ~2-3 hours |
+| Preprocessing | N/A | 3-4 minutes |
+| Eval Frequency | Every 100 steps | Every 1000 steps |
 
 ### Configuration 2: Extended Training (10 Epochs)
 
@@ -184,11 +186,13 @@ python scripts/eval_codegen.py \
 | FP16 | Yes | Yes ✓ |
 | Seed | 42 | 42 ✓ |
 | VRAM Usage | ~23GB | ~23GB |
-| Training Time | ~3-3.5 hours | ~3-3.5 hours |
+| Training Time | ~3-3.5 hours | ~4-5 hours |
+| Preprocessing | N/A | 3-4 minutes |
+| Eval Frequency | Every 100 steps | Every 1000 steps |
 
 **Notes:**
-- **Configuration 1 (Standard):** 5 epochs, effective batch 36, ~2-2.5 hours (includes 3-5 min preprocessing) - Good baseline for comparison and initial experiments
-- **Configuration 2 (Extended):** 10 epochs, effective batch 48, ~3-3.5 hours (includes 3-5 min preprocessing) - Full training for best performance and convergence
+- **Configuration 1 (Standard):** 5 epochs, effective batch 36, ~2-3 hours (includes 3-4 min preprocessing) - Good baseline for comparison and initial experiments
+- **Configuration 2 (Extended):** 10 epochs, effective batch 48, ~4-5 hours (includes 3-4 min preprocessing) - Full training for best performance and convergence
 - Both configurations ensure identical training conditions for fair model comparison
 - **VRAM Optimized:** Batch size 12 tested safe for CodeT5+ Seq2Seq (uses ~40% more VRAM than CodeGen)
 - **VRAM Usage:** Both configs use ~23GB (9GB safety margin on RTX 5090 32GB)
