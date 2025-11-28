@@ -91,11 +91,12 @@ python scripts/train_codegen.py \
   --model Salesforce/codegen-350M-mono \
   --data datasets/java \
   --output model/checkpoints/run1-java-codegen \
-  --batch-size 9 \
-  --grad-accum 4 \
+  --batch-size 12 \
+  --grad-accum 3 \
   --lr 5e-5 \
   --epochs 5 \
-  --max-length 1024
+  --max-length 1024 \
+  --gradient-checkpointing
 ```
 
 **Evaluation - CodeT5+:**
@@ -117,17 +118,17 @@ python scripts/eval_codegen.py \
 **Comparison:**
 | Parameter | CodeT5+ | CodeGen |
 |-----------|---------|---------|
-| Batch Size | 12 | 9 |
-| Gradient Accumulation | 3 | 4 |
-| Effective Batch Size | 12 × 3 = 36 | 9 × 4 = 36 ✓ |
+| Batch Size | 12 | 12 ✓ |
+| Gradient Accumulation | 3 | 3 ✓ |
+| Effective Batch Size | 12 × 3 = 36 | 12 × 3 = 36 ✓ |
 | Learning Rate | 5e-5 | 5e-5 ✓ |
 | Epochs | 5 | 5 ✓ |
 | Max Length | 1024 (source) + 32 (target) | 1024 (combined) ✓ |
 | FP16 | Yes | Yes ✓ |
-| Gradient Checkpointing | No | No ✓ |
+| Gradient Checkpointing | No | Yes (required) |
 | Seed | 42 | 42 ✓ |
-| VRAM Usage | ~23GB | ~24GB |
-| Training Time | ~2-2.5 hours | ~2-3 hours |
+| VRAM Usage | ~23GB | ~23GB |
+| Training Time | ~2-2.5 hours | ~18-20 hours |
 | Preprocessing | N/A | 3-4 minutes |
 | Eval Frequency | Every 100 steps | Every 1000 steps |
 
@@ -152,11 +153,12 @@ python scripts/train_codegen.py \
   --model Salesforce/codegen-350M-mono \
   --data datasets/java \
   --output model/checkpoints/run2-java-codegen \
-  --batch-size 8 \
-  --grad-accum 6 \
+  --batch-size 12 \
+  --grad-accum 4 \
   --lr 2e-5 \
   --epochs 10 \
-  --max-length 1024
+  --max-length 1024 \
+  --gradient-checkpointing
 ```
 
 **Evaluation - CodeT5+:**
@@ -178,27 +180,27 @@ python scripts/eval_codegen.py \
 **Comparison:**
 | Parameter | CodeT5+ | CodeGen |
 |-----------|---------|---------|
-| Batch Size | 12 | 8 |
-| Gradient Accumulation | 4 | 6 |
-| Effective Batch Size | 12 × 4 = 48 | 8 × 6 = 48 ✓ |
+| Batch Size | 12 | 12 ✓ |
+| Gradient Accumulation | 4 | 4 ✓ |
+| Effective Batch Size | 12 × 4 = 48 | 12 × 4 = 48 ✓ |
 | Learning Rate | 2e-5 | 2e-5 ✓ |
 | Epochs | 10 | 10 ✓ |
 | Max Length | 1024 (source) + 32 (target) | 1024 (combined) ✓ |
 | FP16 | Yes | Yes ✓ |
-| Gradient Checkpointing | No | No ✓ |
+| Gradient Checkpointing | No | Yes (required) |
 | Seed | 42 | 42 ✓ |
-| VRAM Usage | ~23GB | ~21GB |
-| Training Time | ~3-3.5 hours | ~4-5 hours |
+| VRAM Usage | ~23GB | ~23GB |
+| Training Time | ~3-3.5 hours | ~36-40 hours |
 | Preprocessing | N/A | 3-4 minutes |
 | Eval Frequency | Every 100 steps | Every 1000 steps |
 
 **Notes:**
-- **Configuration 1 (Standard):** 5 epochs, effective batch 36, ~2-3 hours (includes 3-4 min preprocessing) - Good baseline for comparison and initial experiments
-- **Configuration 2 (Extended):** 10 epochs, effective batch 48, ~4-5 hours (includes 3-4 min preprocessing) - Full training for best performance and convergence
-- Both configurations ensure **identical effective batch size** for fair model comparison (different per-device batch × gradient accumulation to achieve same total)
-- **VRAM Optimized:** CodeT5+ (Seq2Seq) uses ~23GB with batch=12. CodeGen (Causal LM) without gradient checkpointing uses ~24GB with batch=9, ~21GB with batch=8
-- **Batch Size Differences:** CodeGen uses smaller per-device batch (9/8 vs 12) with higher gradient accumulation (4/6 vs 3/4) to fit in VRAM without gradient checkpointing, while maintaining same effective batch size
-- **Speed Optimized:** Gradient checkpointing is **disabled** for 10x faster training (2-3 hours vs 20-22 hours). This requires slightly lower per-device batch size for CodeGen to fit in VRAM
+- **Configuration 1 (Standard):** 5 epochs, CodeT5+ ~2-2.5 hours, CodeGen ~18-20 hours - Good baseline for comparison
+- **Configuration 2 (Extended):** 10 epochs, CodeT5+ ~3-3.5 hours, CodeGen ~36-40 hours - Full training for best performance
+- **Apple to Apple Comparison:** ALL parameters are identical (batch size, gradient accumulation, learning rate, epochs, seed) to ensure fair comparison
+- **Gradient Checkpointing Trade-off:** CodeGen requires gradient checkpointing to fit batch=12 in VRAM, making it ~10x slower than CodeT5+. This is an architectural difference between Causal LM (CodeGen) and Seq2Seq (CodeT5+)
+- **VRAM Usage:** Both use ~23GB with these settings
+- **Training Time Difference:** CodeT5+ is much faster due to not requiring gradient checkpointing. This is expected and part of the comparison
 - **Optimized Preprocessing:** CodeGen preprocesses all samples once (~3-4 min), then training is fast. Uses batch tokenization (1000 samples/batch) for speed
 - **Dynamic Padding:** Batch-wise dynamic padding (pads to longest in batch, not max_length)
 - **Max Length:** CodeT5+ uses separate lengths for source (1024) and target (32). CodeGen uses combined length (1024) for prompt+target in single sequence
