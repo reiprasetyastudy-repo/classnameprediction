@@ -19,13 +19,26 @@ For GitHub cloning during dataset building, set `GITHUB_TOKEN` environment varia
 ## Common Commands
 
 ### Build Dataset
+
+Python dataset (60 repositories):
 ```bash
 python scripts/build_dataset.py \
-  --repos-file data/repos.txt \
+  --repos-file data/repos_python.txt \
   --in data \
   --out datasets \
   --mask \
   --min-lines 3
+```
+
+Java dataset (99 repositories):
+```bash
+python scripts/build_dataset.py \
+  --repos-file data/repos_java.txt \
+  --in data \
+  --out datasets \
+  --mask \
+  --min-lines 3 \
+  --languages java
 ```
 
 Outputs: `datasets/<language>/{train,valid,test}.jsonl` with fields: `language`, `repo`, `path`, `class_span`, `source`, `target`.
@@ -206,6 +219,17 @@ Setup: Install `requirements_hf.txt` and configure `HF_TOKEN` in `.env` file.
 - `generate_readme.py`: Auto-generate README for HuggingFace model repositories
 
 ## Important Details
+
+### Dataset Source Repositories
+High-quality repository lists for building datasets:
+- **Java**: `data/repos_java.txt` (99 repositories)
+  - Covers popular Java projects: Spring, Elasticsearch, Kafka, etc.
+  - Focus on enterprise applications and frameworks
+- **Python**: `data/repos_python.txt` (60 repositories)
+  - Diverse categories: web frameworks, ML/AI, scientific computing, CLI tools
+  - Examples: Django, Flask, PyTorch, TensorFlow, pandas, NumPy, etc.
+  - All projects follow PEP 8 naming conventions
+- All repositories are open source, well-maintained, and have good class naming patterns
 
 ### Language Support
 - Python: Regex-based class extraction (`class <Name>:`)
