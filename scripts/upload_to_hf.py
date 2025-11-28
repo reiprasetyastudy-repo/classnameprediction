@@ -8,7 +8,7 @@ metrics, and auto-generated README to HuggingFace Hub.
 Example usage:
     python scripts/upload_to_hf.py \
         --ckpt model/checkpoints/run1-java-codegen \
-        --hub-model-id reiprasetyastudy/codegen-java-run1 \
+        --hub-model-id reiprasetya-study/codegen-java-run1 \
         --metrics model/metrics/run1-java-codegen/metrics.json \
         --private
 """
@@ -221,19 +221,19 @@ Examples:
   # Upload CodeGen model
   python scripts/upload_to_hf.py \\
       --ckpt model/checkpoints/run1-java-codegen \\
-      --hub-model-id reiprasetyastudy/codegen-java-run1 \\
+      --hub-model-id reiprasetya-study/codegen-java-run1 \\
       --metrics model/metrics/run1-java-codegen/metrics.json
 
   # Upload as private repository
   python scripts/upload_to_hf.py \\
       --ckpt model/checkpoints/run1-java-codegen \\
-      --hub-model-id reiprasetyastudy/codegen-java-run1 \\
+      --hub-model-id reiprasetya-study/codegen-java-run1 \\
       --private
 
   # Upload CodeT5+ model
   python scripts/upload_to_hf.py \\
       --ckpt model/checkpoints/run1-python-codet5 \\
-      --hub-model-id reiprasetyastudy/codet5-python-run1 \\
+      --hub-model-id reiprasetya-study/codet5-python-run1 \\
       --model-name CodeT5+ \\
       --language python
         """

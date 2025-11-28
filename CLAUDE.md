@@ -110,7 +110,7 @@ Upload dataset (once):
 ```bash
 python scripts/upload_dataset_to_hf.py \
   --dataset-dir datasets/java \
-  --dataset-id reiprasetyastudy/java-class-names \
+  --dataset-id reiprasetya-study/java-class-names \
   --language java \
   --private
 ```
@@ -118,14 +118,14 @@ python scripts/upload_dataset_to_hf.py \
 Download on new instance (fast):
 ```bash
 python scripts/download_dataset_from_hf.py \
-  --dataset-id reiprasetyastudy/java-class-names \
+  --dataset-id reiprasetya-study/java-class-names \
   --output datasets/java
 ```
 
 Load directly in Python:
 ```python
 from datasets import load_dataset
-dataset = load_dataset("reiprasetyastudy/java-class-names")
+dataset = load_dataset("reiprasetya-study/java-class-names")
 ```
 
 **Model Management:**
@@ -137,7 +137,7 @@ python scripts/train_codegen.py \
   --data datasets/java \
   --output model/checkpoints/run1-java-codegen \
   --push-to-hub \
-  --hub-model-id reiprasetyastudy/codegen-java-run1 \
+  --hub-model-id reiprasetya-study/codegen-java-run1 \
   --language java \
   --private
 ```
@@ -146,7 +146,7 @@ Manual upload after training:
 ```bash
 python scripts/upload_to_hf.py \
   --ckpt model/checkpoints/run1-java-codegen \
-  --hub-model-id reiprasetyastudy/codegen-java-run1 \
+  --hub-model-id reiprasetya-study/codegen-java-run1 \
   --metrics model/metrics/run1-java-codegen/metrics.json \
   --language java
 ```
@@ -154,7 +154,7 @@ python scripts/upload_to_hf.py \
 View results without downloading model:
 ```bash
 python scripts/view_hf_results.py \
-  --hub-model-id reiprasetyastudy/codegen-java-run1
+  --hub-model-id reiprasetya-study/codegen-java-run1
 ```
 
 Setup: Install `requirements_hf.txt` and configure `HF_TOKEN` in `.env` file.

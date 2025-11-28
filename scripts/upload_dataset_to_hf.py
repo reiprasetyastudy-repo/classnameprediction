@@ -9,14 +9,14 @@ Example usage:
     # Upload Java dataset
     python scripts/upload_dataset_to_hf.py \
         --dataset-dir datasets/java \
-        --dataset-id reiprasetyastudy/java-class-names \
+        --dataset-id reiprasetya-study/java-class-names \
         --language java \
         --private
 
     # Upload Python dataset
     python scripts/upload_dataset_to_hf.py \
         --dataset-dir datasets/python \
-        --dataset-id reiprasetyastudy/python-class-names \
+        --dataset-id reiprasetya-study/python-class-names \
         --language python
 """
 import os
@@ -217,8 +217,8 @@ trainer.train()
 
 - **Project Repository:** [classnameprediction](https://github.com/reiprasetyastudy-repo/classnameprediction)
 - **Models Trained on This Dataset:**
-  - CodeGen: `reiprasetyastudy/codegen-{language}-*`
-  - CodeT5+: `reiprasetyastudy/codet5-{language}-*`
+  - CodeGen: `reiprasetya-study/codegen-{language}-*`
+  - CodeT5+: `reiprasetya-study/codet5-{language}-*`
 
 ## Citation
 
@@ -367,20 +367,20 @@ Examples:
   # Upload Java dataset
   python scripts/upload_dataset_to_hf.py \\
       --dataset-dir datasets/java \\
-      --dataset-id reiprasetyastudy/java-class-names \\
+      --dataset-id reiprasetya-study/java-class-names \\
       --language java \\
       --private
 
   # Upload Python dataset
   python scripts/upload_dataset_to_hf.py \\
       --dataset-dir datasets/python \\
-      --dataset-id reiprasetyastudy/python-class-names \\
+      --dataset-id reiprasetya-study/python-class-names \\
       --language python
 
   # Upload public dataset
   python scripts/upload_dataset_to_hf.py \\
       --dataset-dir datasets/java \\
-      --dataset-id reiprasetyastudy/java-class-names \\
+      --dataset-id reiprasetya-study/java-class-names \\
       --language java
         """
     )

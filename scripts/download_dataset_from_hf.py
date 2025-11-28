@@ -8,17 +8,17 @@ as JSONL files (train.jsonl, valid.jsonl, test.jsonl) for training.
 Example usage:
     # Download Java dataset
     python scripts/download_dataset_from_hf.py \
-        --dataset-id reiprasetyastudy/java-class-names \
+        --dataset-id reiprasetya-study/java-class-names \
         --output datasets/java
 
     # Download Python dataset
     python scripts/download_dataset_from_hf.py \
-        --dataset-id reiprasetyastudy/python-class-names \
+        --dataset-id reiprasetya-study/python-class-names \
         --output datasets/python
 
     # Download specific splits only
     python scripts/download_dataset_from_hf.py \
-        --dataset-id reiprasetyastudy/java-class-names \
+        --dataset-id reiprasetya-study/java-class-names \
         --output datasets/java \
         --splits train,validation
 """
@@ -215,23 +215,23 @@ if __name__ == "__main__":
 Examples:
   # Download Java dataset
   python scripts/download_dataset_from_hf.py \\
-      --dataset-id reiprasetyastudy/java-class-names \\
+      --dataset-id reiprasetya-study/java-class-names \\
       --output datasets/java
 
   # Download Python dataset
   python scripts/download_dataset_from_hf.py \\
-      --dataset-id reiprasetyastudy/python-class-names \\
+      --dataset-id reiprasetya-study/python-class-names \\
       --output datasets/python
 
   # Download only training data
   python scripts/download_dataset_from_hf.py \\
-      --dataset-id reiprasetyastudy/java-class-names \\
+      --dataset-id reiprasetya-study/java-class-names \\
       --output datasets/java \\
       --splits train
 
   # Get dataset info without downloading
   python scripts/download_dataset_from_hf.py \\
-      --dataset-id reiprasetyastudy/java-class-names \\
+      --dataset-id reiprasetya-study/java-class-names \\
       --info
         """
     )

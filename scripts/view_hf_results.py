@@ -7,13 +7,13 @@ from HuggingFace Hub without downloading the full model weights.
 
 Example usage:
     # View metrics summary
-    python scripts/view_hf_results.py --hub-model-id reiprasetyastudy/codegen-java-run1
+    python scripts/view_hf_results.py --hub-model-id reiprasetya-study/codegen-java-run1
 
     # View detailed results
-    python scripts/view_hf_results.py --hub-model-id reiprasetyastudy/codegen-java-run1 --detailed
+    python scripts/view_hf_results.py --hub-model-id reiprasetya-study/codegen-java-run1 --detailed
 
     # Download logs for plotting
-    python scripts/view_hf_results.py --hub-model-id reiprasetyastudy/codegen-java-run1 --download-logs
+    python scripts/view_hf_results.py --hub-model-id reiprasetya-study/codegen-java-run1 --download-logs
 """
 import os
 import sys
@@ -222,16 +222,16 @@ if __name__ == "__main__":
         epilog="""
 Examples:
   # View metrics summary
-  python scripts/view_hf_results.py --hub-model-id reiprasetyastudy/codegen-java-run1
+  python scripts/view_hf_results.py --hub-model-id reiprasetya-study/codegen-java-run1
 
   # View detailed predictions
-  python scripts/view_hf_results.py --hub-model-id reiprasetyastudy/codegen-java-run1 --detailed
+  python scripts/view_hf_results.py --hub-model-id reiprasetya-study/codegen-java-run1 --detailed
 
   # Download training logs
-  python scripts/view_hf_results.py --hub-model-id reiprasetyastudy/codegen-java-run1 --download-logs
+  python scripts/view_hf_results.py --hub-model-id reiprasetya-study/codegen-java-run1 --download-logs
 
   # List all files in repository
-  python scripts/view_hf_results.py --hub-model-id reiprasetyastudy/codegen-java-run1 --list-files
+  python scripts/view_hf_results.py --hub-model-id reiprasetya-study/codegen-java-run1 --list-files
         """
     )
 

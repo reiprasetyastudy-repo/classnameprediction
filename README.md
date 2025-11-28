@@ -35,21 +35,21 @@ Download pre-built datasets in 1-2 minutes (vs 30-60 minutes building from scrat
 **Java Dataset:**
 ```bash
 python scripts/download_dataset_from_hf.py \
-  --dataset-id reiprasetyastudy/java-class-names \
+  --dataset-id reiprasetya-study/java-class-names \
   --output datasets/java
 ```
 
 **Python Dataset:**
 ```bash
 python scripts/download_dataset_from_hf.py \
-  --dataset-id reiprasetyastudy/python-class-names \
+  --dataset-id reiprasetya-study/python-class-names \
   --output datasets/python
 ```
 
 **Load directly in Python:**
 ```python
 from datasets import load_dataset
-dataset = load_dataset("reiprasetyastudy/java-class-names")
+dataset = load_dataset("reiprasetya-study/java-class-names")
 ```
 
 ### Alternative: Build from GitHub (Optional)
@@ -92,7 +92,7 @@ Outputs per language: `datasets/<language>/{train,valid,test}.jsonl` with fields
 ```bash
 python scripts/upload_dataset_to_hf.py \
   --dataset-dir datasets/java \
-  --dataset-id reiprasetyastudy/java-class-names \
+  --dataset-id reiprasetya-study/java-class-names \
   --language java \
   --private
 ```
@@ -336,7 +336,7 @@ python scripts/train_codegen.py \
   --batch-size 12 --grad-accum 3 --lr 5e-5 --epochs 5 \
   --gradient-checkpointing \
   --push-to-hub \
-  --hub-model-id reiprasetyastudy/codegen-java-run1 \
+  --hub-model-id reiprasetya-study/codegen-java-run1 \
   --language java \
   --private
 ```
@@ -346,7 +346,7 @@ python scripts/train_codegen.py \
 ```bash
 python scripts/upload_to_hf.py \
   --ckpt model/checkpoints/run1-java-codegen \
-  --hub-model-id reiprasetyastudy/codegen-java-run1 \
+  --hub-model-id reiprasetya-study/codegen-java-run1 \
   --metrics model/metrics/run1-java-codegen/metrics.json \
   --language java \
   --private
@@ -356,7 +356,7 @@ python scripts/upload_to_hf.py \
 
 ```bash
 python scripts/view_hf_results.py \
-  --hub-model-id reiprasetyastudy/codegen-java-run1
+  --hub-model-id reiprasetya-study/codegen-java-run1
 ```
 
 
