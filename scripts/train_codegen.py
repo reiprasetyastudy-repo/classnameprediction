@@ -234,12 +234,12 @@ def main():
     training_args = TrainingArguments(
         output_dir=args.output,
         eval_strategy='steps',
-        eval_steps=100,
+        eval_steps=1000,  # Evaluate less frequently (was 100)
         save_strategy='steps',
-        save_steps=200,
+        save_steps=2000,  # Save less frequently (was 200)
         learning_rate=args.lr,
         per_device_train_batch_size=args.batch_size,
-        per_device_eval_batch_size=args.batch_size,
+        per_device_eval_batch_size=args.batch_size * 2,  # 2x larger for eval (no gradients)
         gradient_accumulation_steps=args.grad_accum,
         num_train_epochs=args.epochs,
         max_steps=args.max_steps,
@@ -252,14 +252,16 @@ def main():
         metric_for_best_model="eval_loss",
 
         # SOLUSI MEMORI EVALUASI:
-        eval_accumulation_steps=1, # Pindahkan ke CPU setiap 1 step
+        eval_accumulation_steps=4,  # Process 4 batches before moving to CPU (was 1)
     )
 
     # Create custom data collator for dynamic padding
     data_collator = CustomDataCollator(tokenizer)
 
     log_section(logger, "Training Strategy")
-    logger.info(f"Evaluation every {training_args.eval_steps} steps")
+    logger.info(f"Evaluation every {training_args.eval_steps} steps (optimized for speed)")
+    logger.info(f"Eval batch size: {training_args.per_device_eval_batch_size} (2x train batch)")
+    logger.info(f"Eval accumulation steps: {training_args.eval_accumulation_steps}")
     logger.info(f"Save checkpoint every {training_args.save_steps} steps")
     logger.info("Gradient checkpointing enabled for memory efficiency")
     logger.info("FP16 mixed precision enabled")
