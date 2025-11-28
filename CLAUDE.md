@@ -101,6 +101,64 @@ CodeGen prediction uses `scripts/predict_codegen.py` with same arguments.
 python scripts/plot_training_log.py
 ```
 
+### HuggingFace Hub Integration
+
+**Dataset Management:**
+Upload datasets to HuggingFace Datasets Hub to avoid rebuilding on cloud instances (30-60 min build → 1-2 min download).
+
+Upload dataset (once):
+```bash
+python scripts/upload_dataset_to_hf.py \
+  --dataset-dir datasets/java \
+  --dataset-id reiprasetyastudy/java-class-names \
+  --language java \
+  --private
+```
+
+Download on new instance (fast):
+```bash
+python scripts/download_dataset_from_hf.py \
+  --dataset-id reiprasetyastudy/java-class-names \
+  --output datasets/java
+```
+
+Load directly in Python:
+```python
+from datasets import load_dataset
+dataset = load_dataset("reiprasetyastudy/java-class-names")
+```
+
+**Model Management:**
+Upload trained models for persistent storage and easy sharing.
+
+Auto-upload during training:
+```bash
+python scripts/train_codegen.py \
+  --data datasets/java \
+  --output model/checkpoints/run1-java-codegen \
+  --push-to-hub \
+  --hub-model-id reiprasetyastudy/codegen-java-run1 \
+  --language java \
+  --private
+```
+
+Manual upload after training:
+```bash
+python scripts/upload_to_hf.py \
+  --ckpt model/checkpoints/run1-java-codegen \
+  --hub-model-id reiprasetyastudy/codegen-java-run1 \
+  --metrics model/metrics/run1-java-codegen/metrics.json \
+  --language java
+```
+
+View results without downloading model:
+```bash
+python scripts/view_hf_results.py \
+  --hub-model-id reiprasetyastudy/codegen-java-run1
+```
+
+Setup: Install `requirements_hf.txt` and configure `HF_TOKEN` in `.env` file.
+
 ## Architecture
 
 ### Data Pipeline (build_dataset.py)
@@ -140,6 +198,12 @@ python scripts/plot_training_log.py
 - `csv_logger.py`: Custom HuggingFace callback for step-wise CSV logging
 - `diagnose.py`: Diagnostic utilities
 - `plot_training_log.py`: Visualizes training curves from CSV logs
+- `hf_utils.py`: HuggingFace Hub utility functions (upload, download, token management)
+- `upload_dataset_to_hf.py`: Upload datasets to HuggingFace Datasets Hub
+- `download_dataset_from_hf.py`: Download datasets from HuggingFace Datasets Hub
+- `upload_to_hf.py`: Upload trained models to HuggingFace Model Hub
+- `view_hf_results.py`: View model results without downloading full model
+- `generate_readme.py`: Auto-generate README for HuggingFace model repositories
 
 ## Important Details
 
@@ -166,6 +230,8 @@ Training uses `--mask` to replace declared class names with `____` to prevent la
 - Metrics: `model/metrics/<run>/metrics.json`
 - Training logs: `<output>/training_log.csv`, `training_curve.png`, `checkpoints.txt`
 - Datasets: `datasets/<language>/{train,valid,test}.jsonl`
+- HuggingFace Datasets: `https://huggingface.co/datasets/<username>/<dataset-name>`
+- HuggingFace Models: `https://huggingface.co/<username>/<model-name>`
 
 ## Research Documentation
 
