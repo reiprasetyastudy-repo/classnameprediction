@@ -196,7 +196,8 @@ python scripts/eval_codegen.py \
 - Both configurations ensure identical training conditions for fair model comparison
 - **VRAM Optimized:** Batch size 12 tested safe for CodeT5+ Seq2Seq (uses ~40% more VRAM than CodeGen)
 - **VRAM Usage:** Both configs use ~23GB (9GB safety margin on RTX 5090 32GB)
-- **Optimized Preprocessing:** CodeGen preprocesses all samples once (~3-5 minutes), then training is fast. Uses batch tokenization (1000 samples/batch) for speed
+- **Speed Optimized:** Gradient checkpointing is **disabled** by default for 10x faster training on RTX 5090 32GB. Use `--gradient-checkpointing` flag only for smaller VRAM GPUs (12GB)
+- **Optimized Preprocessing:** CodeGen preprocesses all samples once (~3-4 min), then training is fast. Uses batch tokenization (1000 samples/batch) for speed
 - **Dynamic Padding:** Batch-wise dynamic padding (pads to longest in batch, not max_length)
 - **Max Length:** CodeT5+ uses separate lengths for source (1024) and target (32). CodeGen uses combined length (1024) for prompt+target in single sequence
 - Logs are saved to `logs/codet5/` and `logs/codegen/` respectively
@@ -237,7 +238,8 @@ python scripts/train_codegen.py \
   --batch-size 2 \
   --grad-accum 16 \
   --lr 2e-5 \
-  --epochs 5
+  --epochs 5 \
+  --gradient-checkpointing
 ```
 
 **Java Dataset:**
@@ -249,7 +251,8 @@ python scripts/train_codegen.py \
   --batch-size 2 \
   --grad-accum 16 \
   --lr 2e-5 \
-  --epochs 5
+  --epochs 5 \
+  --gradient-checkpointing
 ```
 
 - Effective batch size: 2 × 16 = 32

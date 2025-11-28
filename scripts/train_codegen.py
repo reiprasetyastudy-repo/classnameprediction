@@ -181,6 +181,7 @@ def main():
     ap.add_argument('--max-length', type=int, default=1024)
     ap.add_argument('--max-steps', type=int, default=-1, help='Maximum training steps (overrides epochs if set)')
     ap.add_argument('--seed', type=int, default=42)
+    ap.add_argument('--gradient-checkpointing', action='store_true', help='Enable gradient checkpointing (slower but uses less VRAM)')
 
     args = ap.parse_args()
 
@@ -208,6 +209,7 @@ def main():
         'max_length': args.max_length,
         'max_steps': args.max_steps,
         'fp16': True,
+        'gradient_checkpointing': args.gradient_checkpointing,
         'seed': args.seed,
     })
 
@@ -216,9 +218,13 @@ def main():
     tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "right"
 
-    logger.info("Loading model with gradient checkpointing enabled")
     model = AutoModelForCausalLM.from_pretrained(args.model)
-    model.gradient_checkpointing_enable()
+
+    if args.gradient_checkpointing:
+        logger.info("Loading model with gradient checkpointing enabled")
+        model.gradient_checkpointing_enable()
+    else:
+        logger.info("Loading model without gradient checkpointing (faster training)")
 
     logger.info("Loading dataset...")
     ds = load_dataset(args.data, logger)
@@ -263,7 +269,10 @@ def main():
     logger.info(f"Eval batch size: {training_args.per_device_eval_batch_size} (2x train batch)")
     logger.info(f"Eval accumulation steps: {training_args.eval_accumulation_steps}")
     logger.info(f"Save checkpoint every {training_args.save_steps} steps")
-    logger.info("Gradient checkpointing enabled for memory efficiency")
+    if args.gradient_checkpointing:
+        logger.info("Gradient checkpointing: ENABLED (saves VRAM, slower training)")
+    else:
+        logger.info("Gradient checkpointing: DISABLED (faster training, uses more VRAM)")
     logger.info("FP16 mixed precision enabled")
     logger.info("Dynamic padding per batch (10-20x faster than max_length padding)")
 
