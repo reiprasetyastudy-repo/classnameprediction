@@ -16,6 +16,15 @@ model/checkpoints/
 model/metrics/
 model/tokenizers/
 
+# Training logs
+logs/
+*.log
+
+# HuggingFace Hub
+.env
+.hf_temp/
+downloaded_logs/
+
 # HF / wandb caches
 ~/.cache/huggingface/
 ~/.cache/

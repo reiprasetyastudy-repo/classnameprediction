@@ -5,9 +5,11 @@ Fine-tune CodeGen - 12GB VRAM Optimized with Logging
 
 import argparse
 import os
+import sys
 import torch
 import numpy as np
 import datasets as hfds
+from pathlib import Path
 from transformers import (
     AutoTokenizer,
     AutoModelForCausalLM,
@@ -16,6 +18,13 @@ from transformers import (
 )
 from torch.utils.data import Dataset
 from logger_utils import setup_logger, log_section, log_config
+
+# Import HuggingFace upload utilities
+try:
+    from upload_to_hf import upload_model_to_hub
+    HF_AVAILABLE = True
+except ImportError:
+    HF_AVAILABLE = False
 
 # Bersihkan cache memori
 torch.cuda.empty_cache()
@@ -183,7 +192,24 @@ def main():
     ap.add_argument('--seed', type=int, default=42)
     ap.add_argument('--gradient-checkpointing', action='store_true', help='Enable gradient checkpointing (slower but uses less VRAM)')
 
+    # HuggingFace Hub integration
+    ap.add_argument('--push-to-hub', action='store_true', help='Upload model to HuggingFace Hub after training')
+    ap.add_argument('--hub-model-id', type=str, default=None, help='HuggingFace model ID (e.g., username/model-name)')
+    ap.add_argument('--model-name', type=str, default='CodeGen', help='Model name for README (default: CodeGen)')
+    ap.add_argument('--language', type=str, default='java', help='Programming language for README (default: java)')
+    ap.add_argument('--private', action='store_true', help='Make HuggingFace repository private')
+
     args = ap.parse_args()
+
+    # Validate HuggingFace arguments
+    if args.push_to_hub:
+        if not HF_AVAILABLE:
+            print("❌ Error: HuggingFace Hub utilities not available")
+            print("   Install dependencies: pip install -r requirements_hf.txt")
+            sys.exit(1)
+        if args.hub_model_id is None:
+            print("❌ Error: --hub-model-id is required when using --push-to-hub")
+            sys.exit(1)
 
     # Setup logger - save to logs/codegen/ directory
     logger = setup_logger('train_codegen', log_dir='logs/codegen')
@@ -307,6 +333,38 @@ def main():
     logger.info(f"Best model checkpoint: {trainer.state.best_model_checkpoint}")
     logger.info(f"Best eval loss: {trainer.state.best_metric}")
     logger.info("Done.")
+
+    # Upload to HuggingFace Hub if requested
+    if args.push_to_hub:
+        log_section(logger, "HuggingFace Hub Upload")
+        logger.info(f"Uploading model to: {args.hub_model_id}")
+
+        # Try to find metrics file
+        metrics_file = None
+        possible_metrics = [
+            Path(args.output) / "metrics.json",
+            Path("model/metrics") / Path(args.output).name / "metrics.json",
+        ]
+        for possible in possible_metrics:
+            if possible.exists():
+                metrics_file = str(possible)
+                logger.info(f"Found metrics file: {metrics_file}")
+                break
+
+        success = upload_model_to_hub(
+            checkpoint_path=args.output,
+            hub_model_id=args.hub_model_id,
+            metrics_file=metrics_file,
+            model_name=args.model_name,
+            language=args.language,
+            private=args.private
+        )
+
+        if success:
+            logger.info(f"✅ Model uploaded successfully to HuggingFace Hub")
+            logger.info(f"🔗 View at: https://huggingface.co/{args.hub_model_id}")
+        else:
+            logger.error("❌ Failed to upload model to HuggingFace Hub")
 
 if __name__ == '__main__':
     main()

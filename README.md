@@ -476,6 +476,193 @@ Training artifacts (under your `--output`, e.g., `model/checkpoints/run1-python/
 - `training_curve.png` — training/eval loss plot.
 - `checkpoints.txt` — discovered `checkpoint-*` directories and final model path.
 
+---
+
+## HuggingFace Hub Integration
+
+Upload trained models to HuggingFace Hub for persistent storage, versioning, and easy sharing. This is especially useful when using cloud GPU providers (like Vast.ai) where instances are ephemeral.
+
+### Setup
+
+1. **Install HuggingFace dependencies:**
+```bash
+pip install -r requirements_hf.txt
+```
+
+2. **Get HuggingFace token:**
+   - Visit: https://huggingface.co/settings/tokens
+   - Create a new token with **write** permissions
+   - Copy the token
+
+3. **Configure token:**
+
+Create a `.env` file in the project root:
+```bash
+cp .env.example .env
+```
+
+Edit `.env` and add your token:
+```bash
+HF_TOKEN=hf_your_token_here
+HF_USERNAME=your_username
+```
+
+Alternatively, set environment variable:
+```bash
+export HF_TOKEN=hf_your_token_here
+```
+
+### Option 1: Auto-Upload During Training
+
+Add `--push-to-hub` flag to automatically upload after training completes:
+
+**CodeGen with Auto-Upload:**
+```bash
+python scripts/train_codegen.py \
+  --model Salesforce/codegen-350M-mono \
+  --data datasets/java \
+  --output model/checkpoints/run1-java-codegen \
+  --batch-size 12 \
+  --grad-accum 3 \
+  --lr 5e-5 \
+  --epochs 5 \
+  --gradient-checkpointing \
+  --push-to-hub \
+  --hub-model-id your-username/codegen-java-run1 \
+  --language java \
+  --private
+```
+
+**Parameters:**
+- `--push-to-hub`: Enable auto-upload to HuggingFace Hub
+- `--hub-model-id`: Your HuggingFace model ID (format: username/model-name)
+- `--model-name`: Model name for README (default: CodeGen)
+- `--language`: Programming language for README (default: java)
+- `--private`: Make repository private (optional)
+
+### Option 2: Manual Upload After Training
+
+Upload an already trained model:
+
+```bash
+python scripts/upload_to_hf.py \
+  --ckpt model/checkpoints/run1-java-codegen \
+  --hub-model-id your-username/codegen-java-run1 \
+  --metrics model/metrics/run1-java-codegen/metrics.json \
+  --language java \
+  --private
+```
+
+**What gets uploaded:**
+- ✅ Model weights (`pytorch_model.bin`)
+- ✅ Model configuration (`config.json`)
+- ✅ Tokenizer files
+- ✅ Training logs (`training_log.csv`, `training_curve.png`)
+- ✅ Evaluation metrics (`metrics.json`, `detailed_results.jsonl`)
+- ✅ Auto-generated README with metrics and usage examples
+
+### View Results Without Downloading Model
+
+View training results and metrics directly from HuggingFace Hub without downloading the full model (useful for quick checks and comparisons):
+
+**View metrics summary:**
+```bash
+python scripts/view_hf_results.py \
+  --hub-model-id your-username/codegen-java-run1
+```
+
+**View detailed predictions:**
+```bash
+python scripts/view_hf_results.py \
+  --hub-model-id your-username/codegen-java-run1 \
+  --detailed \
+  --detailed-limit 20
+```
+
+**Download training logs for plotting:**
+```bash
+python scripts/view_hf_results.py \
+  --hub-model-id your-username/codegen-java-run1 \
+  --download-logs \
+  --logs-dir downloaded_logs/run1
+```
+
+**List all files in repository:**
+```bash
+python scripts/view_hf_results.py \
+  --hub-model-id your-username/codegen-java-run1 \
+  --list-files
+```
+
+### Use Cases
+
+**1. Vast.ai / Cloud GPU Workflow:**
+```bash
+# Clone project on cloud instance
+git clone https://github.com/your-username/classnameprediction
+cd classnameprediction
+
+# Setup
+source .venv/bin/activate
+pip install -r requirements.txt requirements_hf.txt
+
+# Train with auto-upload (saves to HF Hub automatically)
+python scripts/train_codegen.py \
+  --data datasets/java \
+  --output model/checkpoints/run1-java-codegen \
+  --push-to-hub \
+  --hub-model-id your-username/codegen-java-run1-experiment
+
+# View results from any machine (no download needed)
+python scripts/view_hf_results.py \
+  --hub-model-id your-username/codegen-java-run1-experiment
+```
+
+**2. Experiment Archive / Museum:**
+
+Keep all experiment results accessible without storing large model files locally:
+```bash
+# Upload multiple experiments
+python scripts/upload_to_hf.py \
+  --ckpt model/checkpoints/run1-java-codegen \
+  --hub-model-id your-username/experiments/java-run1
+
+python scripts/upload_to_hf.py \
+  --ckpt model/checkpoints/run2-java-codegen \
+  --hub-model-id your-username/experiments/java-run2
+
+# Compare results (no model download needed)
+python scripts/view_hf_results.py --hub-model-id your-username/experiments/java-run1
+python scripts/view_hf_results.py --hub-model-id your-username/experiments/java-run2
+```
+
+**3. Model Sharing and Collaboration:**
+```bash
+# Upload public model
+python scripts/upload_to_hf.py \
+  --ckpt model/checkpoints/best-java-model \
+  --hub-model-id your-username/codegen-java-best \
+  --language java
+  # (no --private flag = public repository)
+
+# Others can use your model directly
+python scripts/predict_codegen.py \
+  --ckpt your-username/codegen-java-best \
+  --language java \
+  --file test.java
+```
+
+### Benefits
+
+- **Persistent Storage**: Models survive instance termination on cloud providers
+- **Version Control**: Keep all experiments organized with Git-based versioning
+- **No Manual Downloads**: View results without downloading large model files
+- **Easy Sharing**: Share models with team or publicly
+- **Automatic README**: Generated with metrics, usage examples, and citations
+- **Bandwidth Efficient**: Download only what you need (logs, metrics, or full model)
+
+---
+
 ## Notes
 - Start with Python for best heuristic parsing; Java is supported with basic regex.
 - Use `--mask` to replace the declared class identifier with `____` to avoid label leakage.
