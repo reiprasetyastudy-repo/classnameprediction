@@ -26,6 +26,10 @@ try:
 except ImportError:
     HF_AVAILABLE = False
 
+# Fix PyTorch 2.6 weights_only issue for checkpoint resume
+if hasattr(torch.serialization, 'add_safe_globals'):
+    torch.serialization.add_safe_globals([np.core.multiarray._reconstruct])
+
 # Bersihkan cache memori
 torch.cuda.empty_cache()
 

@@ -242,6 +242,50 @@ python scripts/eval_codegen.py \
 - All configurations use seed 42 for reproducibility
 
 
+## Resume Training from Checkpoint
+
+If training crashes or is interrupted, resume from the latest checkpoint:
+
+**Auto-detect latest checkpoint:**
+```bash
+python scripts/train_codegen.py \
+  --model Salesforce/codegen-350M-mono \
+  --data datasets/java \
+  --output model/checkpoints/run1-java-codegen \
+  --batch-size 12 \
+  --grad-accum 3 \
+  --lr 5e-5 \
+  --epochs 5 \
+  --max-length 1024 \
+  --gradient-checkpointing \
+  --resume-from-checkpoint auto
+```
+
+**Resume from specific checkpoint:**
+```bash
+python scripts/train_codegen.py \
+  --resume-from-checkpoint model/checkpoints/run1-java-codegen/checkpoint-2000 \
+  ...
+```
+
+**Upload checkpoint to HuggingFace (for VM migration):**
+```bash
+hf upload reiprasetya-study/codegen-java-checkpoint2000 \
+  model/checkpoints/run1-java-codegen/checkpoint-2000 \
+  --repo-type model \
+  --private
+```
+
+**Download checkpoint on new VM:**
+```bash
+hf download reiprasetya-study/codegen-java-checkpoint2000 \
+  --local-dir model/checkpoints/run1-java-codegen/checkpoint-2000 \
+  --repo-type model
+```
+
+Checkpoints are saved every 2000 steps and contain: model weights, optimizer state, scheduler state, and training progress. Training will resume from the exact step with the same loss and learning rate.
+
+
 ## Train CodeT5+ (Other Configurations)
 
 For Python dataset or custom configurations:

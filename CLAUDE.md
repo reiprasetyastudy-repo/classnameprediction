@@ -71,6 +71,27 @@ python scripts/train_codegen.py \
 
 Use `--cpu` for CPU training, `--bf16` for Apple Silicon/MPS, `--fp16` for CUDA.
 
+### Resume Training from Checkpoint
+Auto-detect latest checkpoint:
+```bash
+python scripts/train_codegen.py \
+  --model Salesforce/codegen-350M-mono \
+  --data datasets/java \
+  --output model/checkpoints/run1-java-codegen \
+  --batch-size 12 --grad-accum 3 --lr 5e-5 --epochs 5 \
+  --max-length 1024 --gradient-checkpointing \
+  --resume-from-checkpoint auto
+```
+
+Resume from specific checkpoint:
+```bash
+python scripts/train_codegen.py \
+  --resume-from-checkpoint model/checkpoints/run1/checkpoint-2000 \
+  ...
+```
+
+Checkpoints saved every 2000 steps. Contains model, optimizer, scheduler state for exact resume.
+
 ### Evaluate Models
 CodeT5+:
 ```bash
