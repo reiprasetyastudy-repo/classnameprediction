@@ -65,7 +65,7 @@ https://github.com/psf/requests
 
 Run dataset builder:
 
-**Python Dataset (300 repositories):**
+**Python Dataset (450 repositories):**
 ```bash
 python scripts/build_dataset.py \
   --repos-file data/repos_python.txt \
