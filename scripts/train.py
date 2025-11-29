@@ -34,6 +34,11 @@ import torch
 if torch.cuda.is_available():
     torch.cuda.set_device(cuda_device)
 
+# Fix PyTorch 2.6 weights_only issue for checkpoint resume
+import numpy as np
+if hasattr(torch.serialization, 'add_safe_globals'):
+    torch.serialization.add_safe_globals([np.core.multiarray._reconstruct])
+
 from dataclasses import dataclass
 from typing import Dict, List
 import time
