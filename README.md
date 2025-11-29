@@ -65,17 +65,17 @@ https://github.com/psf/requests
 
 Run dataset builder:
 
-**Python Dataset:**
+**Python Dataset (300 repositories):**
 ```bash
 python scripts/build_dataset.py \
-  --repos-file data/repos.txt \
+  --repos-file data/repos_python.txt \
   --in data \
   --out datasets \
   --mask \
   --min-lines 3
 ```
 
-**Java Dataset:**
+**Java Dataset (99 repositories):**
 ```bash
 python scripts/build_dataset.py \
   --repos-file data/repos_java.txt \

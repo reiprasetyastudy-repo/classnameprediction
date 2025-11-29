@@ -246,9 +246,9 @@ High-quality repository lists for building datasets:
 - **Java**: `data/repos_java.txt` (99 repositories)
   - Covers popular Java projects: Spring, Elasticsearch, Kafka, etc.
   - Focus on enterprise applications and frameworks
-- **Python**: `data/repos_python.txt` (60 repositories)
-  - Diverse categories: web frameworks, ML/AI, scientific computing, CLI tools
-  - Examples: Django, Flask, PyTorch, TensorFlow, pandas, NumPy, etc.
+- **Python**: `data/repos_python.txt` (300 repositories)
+  - Diverse categories: web frameworks, ML/AI, scientific computing, CLI tools, Django ecosystem, testing, code quality
+  - Examples: Django, Flask, PyTorch, TensorFlow, pandas, NumPy, FastAPI, Streamlit, etc.
   - All projects follow PEP 8 naming conventions
 - All repositories are open source, well-maintained, and have good class naming patterns
 
