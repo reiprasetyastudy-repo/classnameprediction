@@ -18,6 +18,7 @@ from transformers import (
 )
 from torch.utils.data import Dataset
 from logger_utils import setup_logger, log_section, log_config
+from csv_logger import CSVLoggerCallback
 
 # Import HuggingFace upload utilities
 try:
@@ -303,6 +304,11 @@ def main():
     # Create custom data collator for dynamic padding
     data_collator = CustomDataCollator(tokenizer)
 
+    # Setup CSV logger for training metrics
+    csv_log_path = os.path.join(args.output, 'training_log.csv')
+    csv_callback = CSVLoggerCallback(csv_log_path)
+    logger.info(f"Training log will be saved to: {csv_log_path}")
+
     log_section(logger, "Training Strategy")
     logger.info(f"Evaluation every {training_args.eval_steps} steps (optimized for speed)")
     logger.info(f"Eval batch size: {training_args.per_device_eval_batch_size} (2x train batch)")
@@ -323,6 +329,7 @@ def main():
         data_collator=data_collator,  # Dynamic padding
         compute_metrics=compute_metrics,
         preprocess_logits_for_metrics=preprocess_logits_for_metrics, # Inject fungsi hemat memori
+        callbacks=[csv_callback],
     )
 
     log_section(logger, "Starting Training")
