@@ -126,8 +126,8 @@ python scripts/train.py \
   --model Salesforce/codet5p-220m \
   --data datasets/python \
   --output model/checkpoints/run1-python \
-  --batch-size 12 \
-  --grad-accum 3 \
+  --batch-size 10 \
+  --grad-accum 4 \
   --lr 5e-5 \
   --epochs 5 \
   --fp16
@@ -137,7 +137,7 @@ python scripts/train.py \
 | Dataset | Batch | Grad Accum | Effective Batch | VRAM | Time | Accuracy |
 |---------|-------|------------|-----------------|------|------|----------|
 | Java | 10 | 4 | 40 | ~26GB | ~7h | ~85.7% |
-| Python | 12 | 3 | 36 | ~23GB | ~2.5h | ~85.5% |
+| Python | 10 | 4 | 40 | ~24GB | ~2.5h | ~85.5% |
 
 ### CodeGen Training
 
@@ -164,8 +164,8 @@ python scripts/train_codegen.py \
   --model Salesforce/codegen-350M-mono \
   --data datasets/python \
   --output model/checkpoints/run1-python-codegen \
-  --batch-size 12 \
-  --grad-accum 3 \
+  --batch-size 10 \
+  --grad-accum 4 \
   --lr 5e-5 \
   --epochs 5 \
   --max-length 1024 \
@@ -177,7 +177,7 @@ python scripts/train_codegen.py \
 | Dataset | Batch | Grad Accum | Effective Batch | Time | Notes |
 |---------|-------|------------|-----------------|------|-------|
 | Java | 10 | 4 | 40 | ~18-20h | Same params as CodeT5+ for fair comparison |
-| Python | 12 | 3 | 36 | ~10-12h | Requires gradient checkpointing (~10x slower than CodeT5+) |
+| Python | 10 | 4 | 40 | ~10-12h | Same params as CodeT5+ for fair comparison |
 
 ### Key Differences: CodeT5+ vs CodeGen
 
