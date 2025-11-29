@@ -337,7 +337,7 @@ https://github.com/grandyang/leetcode
 https://github.com/soulmachine/leetcode
 https://github.com/algorithmzuo/algorithm-journey
 https://github.com/pezy/LeetCode
-https://github.com/yuanbin/algorithm-exercise
+https://github.com/mahmoud/glom
 https://github.com/apachecn/algo-zh
 https://github.com/liuyubobobo/Play-with-Algorithms
 https://github.com/liuyubobobo/Play-with-Data-Structures
@@ -400,7 +400,7 @@ https://github.com/charlax/professional-programming
 https://github.com/coodict/python3-in-one-pic
 https://github.com/geekan/HowToLiveLonger
 https://github.com/joaoventura/full-speed-python
-https://github.com/google/python-style-guide
+https://github.com/python-jsonschema/jsonschema
 https://github.com/cosmicpython/book
 https://github.com/fluentpython/example-code
 https://github.com/fluentpython/example-code-2e
