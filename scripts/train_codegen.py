@@ -192,6 +192,9 @@ def main():
     ap.add_argument('--seed', type=int, default=42)
     ap.add_argument('--gradient-checkpointing', action='store_true', help='Enable gradient checkpointing (slower but uses less VRAM)')
 
+    # Resume training
+    ap.add_argument('--resume-from-checkpoint', type=str, default=None, help='Path to checkpoint to resume from, or "auto" to auto-detect latest checkpoint')
+
     # HuggingFace Hub integration
     ap.add_argument('--push-to-hub', action='store_true', help='Upload model to HuggingFace Hub after training')
     ap.add_argument('--hub-model-id', type=str, default=None, help='HuggingFace model ID (e.g., username/model-name)')
@@ -316,8 +319,25 @@ def main():
     logger.info(f"Total training samples: {len(train_dataset)}")
     logger.info(f"Total validation samples: {len(val_dataset)}")
 
+    # Handle checkpoint resumption
+    resume_from_checkpoint = args.resume_from_checkpoint
+    if resume_from_checkpoint == "auto":
+        # Auto-detect latest checkpoint in output dir
+        from transformers.trainer_utils import get_last_checkpoint
+        last_checkpoint = get_last_checkpoint(args.output)
+        if last_checkpoint is not None:
+            logger.info(f"Checkpoint detected, resuming training from {last_checkpoint}")
+            resume_from_checkpoint = last_checkpoint
+        else:
+            logger.info("No checkpoint found, starting training from scratch")
+            resume_from_checkpoint = None
+    elif resume_from_checkpoint is not None:
+        logger.info(f"Resuming training from checkpoint: {resume_from_checkpoint}")
+    else:
+        logger.info("Starting training from scratch")
+
     try:
-        trainer.train()
+        trainer.train(resume_from_checkpoint=resume_from_checkpoint)
         logger.info("Training completed successfully")
     except Exception as e:
         logger.error(f"Training failed with error: {e}")
