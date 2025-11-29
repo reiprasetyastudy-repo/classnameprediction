@@ -201,6 +201,7 @@ def main():
     ap.add_argument('--max-length', type=int, default=1024)
     ap.add_argument('--max-steps', type=int, default=-1, help='Maximum training steps (overrides epochs if set)')
     ap.add_argument('--seed', type=int, default=42)
+    ap.add_argument('--fp16', action='store_true', help='Enable FP16 mixed precision training')
     ap.add_argument('--gradient-checkpointing', action='store_true', help='Enable gradient checkpointing (slower but uses less VRAM)')
 
     # Resume training
@@ -248,7 +249,7 @@ def main():
         'epochs': args.epochs,
         'max_length': args.max_length,
         'max_steps': args.max_steps,
-        'fp16': True,
+        'fp16': args.fp16,
         'gradient_checkpointing': args.gradient_checkpointing,
         'seed': args.seed,
     })
@@ -291,7 +292,7 @@ def main():
         max_steps=args.max_steps,
         logging_steps=10,
         seed=args.seed,
-        fp16=True,
+        fp16=args.fp16,
         dataloader_num_workers=0,
         save_total_limit=2,
         load_best_model_at_end=True,
