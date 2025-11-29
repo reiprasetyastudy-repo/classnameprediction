@@ -35,14 +35,14 @@ if torch.cuda.is_available():
     torch.cuda.set_device(cuda_device)
 
 # Fix PyTorch 2.6 weights_only issue for checkpoint resume
-import numpy as np
-if hasattr(torch.serialization, 'add_safe_globals'):
-    torch.serialization.add_safe_globals([
-        np.core.multiarray._reconstruct,
-        np.ndarray,
-        np.dtype,
-        np.random.RandomState,
-    ])
+# Monkey-patch torch.load to use weights_only=False for checkpoint files
+_original_torch_load = torch.load
+def _patched_torch_load(f, *args, **kwargs):
+    # For checkpoint files, disable weights_only
+    if 'weights_only' not in kwargs:
+        kwargs['weights_only'] = False
+    return _original_torch_load(f, *args, **kwargs)
+torch.load = _patched_torch_load
 
 from dataclasses import dataclass
 from typing import Dict, List

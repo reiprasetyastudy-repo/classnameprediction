@@ -27,13 +27,14 @@ except ImportError:
     HF_AVAILABLE = False
 
 # Fix PyTorch 2.6 weights_only issue for checkpoint resume
-if hasattr(torch.serialization, 'add_safe_globals'):
-    torch.serialization.add_safe_globals([
-        np.core.multiarray._reconstruct,
-        np.ndarray,
-        np.dtype,
-        np.random.RandomState,
-    ])
+# Monkey-patch torch.load to use weights_only=False for checkpoint files
+_original_torch_load = torch.load
+def _patched_torch_load(f, *args, **kwargs):
+    # For checkpoint files, disable weights_only
+    if 'weights_only' not in kwargs:
+        kwargs['weights_only'] = False
+    return _original_torch_load(f, *args, **kwargs)
+torch.load = _patched_torch_load
 
 # Bersihkan cache memori
 torch.cuda.empty_cache()
