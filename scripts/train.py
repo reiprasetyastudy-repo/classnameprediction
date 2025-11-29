@@ -45,6 +45,7 @@ from transformers import (
     Seq2SeqTrainer,
     Seq2SeqTrainingArguments,
 )
+from transformers.trainer_utils import get_last_checkpoint
 from logger_utils import setup_logger, log_section, log_config
 
 
@@ -97,6 +98,7 @@ def main():
 
     ap.add_argument('--wandb', action='store_true')
     ap.add_argument('--cuda-device', type=int, default=0, help='CUDA device id (default: 0)')
+    ap.add_argument('--resume-from-checkpoint', type=str, default=None, help='Path to checkpoint to resume from, or "auto" to auto-detect latest checkpoint')
     args = ap.parse_args()
 
     # Setup logger - save to logs/codet5/ directory
@@ -181,7 +183,25 @@ def main():
     logger.info("Starting training...")
     logger.info(f"Total training steps: {len(ds['train']) // (args.batch_size * args.grad_accum) * args.epochs}")
 
-    trainer.train()
+    # Handle checkpoint resume
+    resume_from_checkpoint = args.resume_from_checkpoint
+    if resume_from_checkpoint == "auto":
+        # Auto-detect latest checkpoint
+        last_checkpoint = get_last_checkpoint(args.output)
+        if last_checkpoint is not None:
+            logger.info(f"Auto-detected checkpoint: {last_checkpoint}")
+            resume_from_checkpoint = last_checkpoint
+        else:
+            logger.info("No checkpoint found for auto-resume, starting from scratch")
+            resume_from_checkpoint = None
+    elif resume_from_checkpoint is not None:
+        logger.info(f"Resuming training from checkpoint: {resume_from_checkpoint}")
+
+    # Start training
+    if resume_from_checkpoint:
+        trainer.train(resume_from_checkpoint=resume_from_checkpoint)
+    else:
+        trainer.train()
 
     training_time = time.time() - start_time
     logger.info(f"Training completed in {training_time:.2f} seconds ({training_time/3600:.2f} hours)")
