@@ -98,20 +98,34 @@ python scripts/upload_dataset_to_hf.py \
 ```
 
 
-## Fair Comparison Training (CodeT5+ vs CodeGen)
+## Training (Optimized for RTX 5090 - 32GB VRAM)
 
-**Optimized for RTX 5090 (32GB VRAM) - GPU Only**
+These configurations are optimized for best performance, training time, and GPU utilization on RTX 5090.
 
-This section provides matched configurations for direct comparison between CodeT5+ and CodeGen models. Both models are trained with identical effective batch sizes, learning rates, and epochs to ensure fair evaluation.
+### CodeT5+ Training
 
-### Configuration 1: Standard Training (5 Epochs)
-
-**CodeT5+ - Java Dataset:**
+**Java Dataset (275k samples):**
 ```bash
+# Set environment variable to reduce memory fragmentation
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+
 python scripts/train.py \
   --model Salesforce/codet5p-220m \
   --data datasets/java \
   --output model/checkpoints/run1-java \
+  --batch-size 10 \
+  --grad-accum 4 \
+  --lr 5e-5 \
+  --epochs 5 \
+  --fp16
+```
+
+**Python Dataset (155k samples):**
+```bash
+python scripts/train.py \
+  --model Salesforce/codet5p-220m \
+  --data datasets/python \
+  --output model/checkpoints/run1-python \
   --batch-size 12 \
   --grad-accum 3 \
   --lr 5e-5 \
@@ -119,7 +133,15 @@ python scripts/train.py \
   --fp16
 ```
 
-**CodeGen - Java Dataset:**
+**Performance:**
+| Dataset | Batch | Grad Accum | Effective Batch | VRAM | Time | Accuracy |
+|---------|-------|------------|-----------------|------|------|----------|
+| Java | 10 | 4 | 40 | ~26GB | ~7h | ~85.7% |
+| Python | 12 | 3 | 36 | ~23GB | ~2.5h | ~85.5% |
+
+### CodeGen Training
+
+**Java Dataset:**
 ```bash
 python scripts/train_codegen.py \
   --model Salesforce/codegen-350M-mono \
@@ -133,120 +155,63 @@ python scripts/train_codegen.py \
   --gradient-checkpointing
 ```
 
-**Evaluation - CodeT5+:**
-```bash
-python scripts/eval_gpu.py \
-  --ckpt model/checkpoints/run1-java \
-  --data datasets/java \
-  --k 5
-```
-
-**Evaluation - CodeGen:**
-```bash
-python scripts/eval_codegen.py \
-  --model model/checkpoints/run1-java-codegen \
-  --valid-data datasets/java/test.jsonl \
-  --output-dir evaluation/run1-java-codegen
-```
-
-**Comparison:**
-| Parameter | CodeT5+ | CodeGen |
-|-----------|---------|---------|
-| Batch Size | 12 | 12 ✓ |
-| Gradient Accumulation | 3 | 3 ✓ |
-| Effective Batch Size | 12 × 3 = 36 | 12 × 3 = 36 ✓ |
-| Learning Rate | 5e-5 | 5e-5 ✓ |
-| Epochs | 5 | 5 ✓ |
-| Max Length | 1024 (source) + 32 (target) | 1024 (combined) ✓ |
-| FP16 | Yes | Yes ✓ |
-| Gradient Checkpointing | No | Yes (required) |
-| Seed | 42 | 42 ✓ |
-| VRAM Usage | ~23GB | ~23GB |
-| Training Time | ~2-2.5 hours | ~18-20 hours |
-| Preprocessing | N/A | 3-4 minutes |
-| Eval Frequency | Every 100 steps | Every 1000 steps |
-
-### Configuration 2: Extended Training (10 Epochs)
-
-**CodeT5+ - Java Dataset:**
-```bash
-python scripts/train.py \
-  --model Salesforce/codet5p-220m \
-  --data datasets/java \
-  --output model/checkpoints/run2-java \
-  --batch-size 12 \
-  --grad-accum 4 \
-  --lr 2e-5 \
-  --epochs 10 \
-  --fp16
-```
-
-**CodeGen - Java Dataset:**
+**Python Dataset:**
 ```bash
 python scripts/train_codegen.py \
   --model Salesforce/codegen-350M-mono \
-  --data datasets/java \
-  --output model/checkpoints/run2-java-codegen \
+  --data datasets/python \
+  --output model/checkpoints/run1-python-codegen \
   --batch-size 12 \
-  --grad-accum 4 \
-  --lr 2e-5 \
-  --epochs 10 \
+  --grad-accum 3 \
+  --lr 5e-5 \
+  --epochs 5 \
   --max-length 1024 \
   --gradient-checkpointing
 ```
 
-**Evaluation - CodeT5+:**
-```bash
-python scripts/eval_gpu.py \
-  --ckpt model/checkpoints/run2-java \
-  --data datasets/java \
-  --k 5
-```
+**Performance:**
+| Dataset | Time | Preprocessing | Notes |
+|---------|------|---------------|-------|
+| Java | ~18-20h | 3-4 min | Requires gradient checkpointing (~10x slower than CodeT5+) |
+| Python | ~10-12h | 3-4 min | Same effective batch as CodeT5+ for fair comparison |
 
-**Evaluation - CodeGen:**
-```bash
-python scripts/eval_codegen.py \
-  --model model/checkpoints/run2-java-codegen \
-  --valid-data datasets/java/test.jsonl \
-  --output-dir evaluation/run2-java-codegen
-```
+### Key Differences: CodeT5+ vs CodeGen
 
-**Comparison:**
-| Parameter | CodeT5+ | CodeGen |
-|-----------|---------|---------|
-| Batch Size | 12 | 12 ✓ |
-| Gradient Accumulation | 4 | 4 ✓ |
-| Effective Batch Size | 12 × 4 = 48 | 12 × 4 = 48 ✓ |
-| Learning Rate | 2e-5 | 2e-5 ✓ |
-| Epochs | 10 | 10 ✓ |
-| Max Length | 1024 (source) + 32 (target) | 1024 (combined) ✓ |
-| FP16 | Yes | Yes ✓ |
-| Gradient Checkpointing | No | Yes (required) |
-| Seed | 42 | 42 ✓ |
-| VRAM Usage | ~23GB | ~23GB |
-| Training Time | ~3-3.5 hours | ~36-40 hours |
-| Preprocessing | N/A | 3-4 minutes |
-| Eval Frequency | Every 100 steps | Every 1000 steps |
+| Aspect | CodeT5+ | CodeGen |
+|--------|---------|---------|
+| Architecture | Seq2Seq (Encoder-Decoder) | Causal LM (Decoder-only) |
+| Training Speed | Fast (2.5-7h) | Slow (10-20h) |
+| Gradient Checkpointing | Not needed | Required (causes 10x slowdown) |
+| VRAM Efficiency | High | Lower (needs checkpointing) |
+| Preprocessing | Cached automatically | Custom (~3-4 min once) |
 
 **Notes:**
-- **Configuration 1 (Standard):** 5 epochs, CodeT5+ ~2-2.5 hours, CodeGen ~18-20 hours - Good baseline for comparison
-- **Configuration 2 (Extended):** 10 epochs, CodeT5+ ~3-3.5 hours, CodeGen ~36-40 hours - Full training for best performance
-- **Apple to Apple Comparison:** ALL parameters are identical (batch size, gradient accumulation, learning rate, epochs, seed) to ensure fair comparison
-- **Gradient Checkpointing Trade-off:** CodeGen requires gradient checkpointing to fit batch=12 in VRAM, making it ~10x slower than CodeT5+. This is an architectural difference between Causal LM (CodeGen) and Seq2Seq (CodeT5+)
-- **VRAM Usage:** Both use ~23GB with these settings
-- **Training Time Difference:** CodeT5+ is much faster due to not requiring gradient checkpointing. This is expected and part of the comparison
-- **Optimized Preprocessing:** CodeGen preprocesses all samples once (~3-4 min), then training is fast. Uses batch tokenization (1000 samples/batch) for speed
-- **Dynamic Padding:** Batch-wise dynamic padding (pads to longest in batch, not max_length)
-- **Max Length:** CodeT5+ uses separate lengths for source (1024) and target (32). CodeGen uses combined length (1024) for prompt+target in single sequence
-- Logs are saved to `logs/codet5/` and `logs/codegen/` respectively
-- All configurations use seed 42 for reproducibility
+- CodeT5+ is recommended for faster iteration
+- CodeGen may have slightly different prediction patterns due to architecture
+- Both achieve similar accuracy (~85-86%)
+- All configs use seed 42 for reproducibility
+- Logs saved to `logs/codet5/` and `logs/codegen/`
 
 
 ## Resume Training from Checkpoint
 
-If training crashes or is interrupted, resume from the latest checkpoint:
+Both `train.py` (CodeT5+) and `train_codegen.py` (CodeGen) support checkpoint resume. If training crashes or is interrupted, resume from the latest checkpoint:
 
-**Auto-detect latest checkpoint:**
+**CodeT5+ - Auto-detect latest checkpoint:**
+```bash
+python scripts/train.py \
+  --model Salesforce/codet5p-220m \
+  --data datasets/java \
+  --output model/checkpoints/run1-java \
+  --batch-size 10 \
+  --grad-accum 4 \
+  --lr 5e-5 \
+  --epochs 5 \
+  --fp16 \
+  --resume-from-checkpoint auto
+```
+
+**CodeGen - Auto-detect latest checkpoint:**
 ```bash
 python scripts/train_codegen.py \
   --model Salesforce/codegen-350M-mono \
@@ -263,51 +228,28 @@ python scripts/train_codegen.py \
 
 **Resume from specific checkpoint:**
 ```bash
-python scripts/train_codegen.py \
-  --resume-from-checkpoint model/checkpoints/run1-java-codegen/checkpoint-2000 \
-  ...
+# Add to any training command:
+--resume-from-checkpoint model/checkpoints/run1-java/checkpoint-15000
 ```
 
-**Upload checkpoint to HuggingFace (for VM migration):**
+**Checkpoint Management:**
+- CodeT5+: Saved every **1000 steps**, keeps last 2 checkpoints
+- CodeGen: Saved every **2000 steps**, keeps last 2 checkpoints
+- Contains: model weights, optimizer state, scheduler state, RNG state, training progress
+- Resume behavior: Continues from exact step with same loss and learning rate
+- **PyTorch 2.6 compatible**: Uses monkey-patched `torch.load` for checkpoint resume
+
+**Upload/Download Checkpoints (for VM migration):**
 ```bash
-hf upload reiprasetya-study/codegen-java-checkpoint2000 \
-  model/checkpoints/run1-java-codegen/checkpoint-2000 \
-  --repo-type model \
-  --private
-```
+# Upload to HuggingFace Hub
+hf upload username/checkpoint-name model/checkpoints/run1-java/checkpoint-15000 --repo-type model --private
 
-**Download checkpoint on new VM:**
-```bash
-hf download reiprasetya-study/codegen-java-checkpoint2000 \
-  --local-dir model/checkpoints/run1-java-codegen/checkpoint-2000 \
-  --repo-type model
-```
-
-Checkpoints are saved every 2000 steps and contain: model weights, optimizer state, scheduler state, and training progress. Training will resume from the exact step with the same loss and learning rate.
-
-
-## Train CodeT5+ (Other Configurations)
-
-For Python dataset or custom configurations:
-
-```bash
-python scripts/train.py \
-  --model Salesforce/codet5p-220m \
-  --data datasets/python \
-  --output model/checkpoints/run1-python \
-  --batch-size 8 --grad-accum 2 --epochs 3 --fp16
-```
-
-The prompt template is:
-
-```
-Predict class name:
-{source}
-Name:
+# Download on new VM
+hf download username/checkpoint-name --local-dir model/checkpoints/run1-java/checkpoint-15000 --repo-type model
 ```
 
 
-## Train CodeGen (Other VRAM Configurations)
+## Alternative VRAM Configurations
 
 ### For 12GB VRAM (e.g., RTX 3060, RTX 4060 Ti)
 
