@@ -143,16 +143,19 @@ python scripts/train.py \
 
 **Java Dataset:**
 ```bash
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+
 python scripts/train_codegen.py \
   --model Salesforce/codegen-350M-mono \
   --data datasets/java \
   --output model/checkpoints/run1-java-codegen \
-  --batch-size 12 \
-  --grad-accum 3 \
+  --batch-size 10 \
+  --grad-accum 4 \
   --lr 5e-5 \
   --epochs 5 \
   --max-length 1024 \
-  --gradient-checkpointing
+  --gradient-checkpointing \
+  --fp16
 ```
 
 **Python Dataset:**
@@ -166,14 +169,15 @@ python scripts/train_codegen.py \
   --lr 5e-5 \
   --epochs 5 \
   --max-length 1024 \
-  --gradient-checkpointing
+  --gradient-checkpointing \
+  --fp16
 ```
 
 **Performance:**
-| Dataset | Time | Preprocessing | Notes |
-|---------|------|---------------|-------|
-| Java | ~18-20h | 3-4 min | Requires gradient checkpointing (~10x slower than CodeT5+) |
-| Python | ~10-12h | 3-4 min | Same effective batch as CodeT5+ for fair comparison |
+| Dataset | Batch | Grad Accum | Effective Batch | Time | Notes |
+|---------|-------|------------|-----------------|------|-------|
+| Java | 10 | 4 | 40 | ~18-20h | Same params as CodeT5+ for fair comparison |
+| Python | 12 | 3 | 36 | ~10-12h | Requires gradient checkpointing (~10x slower than CodeT5+) |
 
 ### Key Differences: CodeT5+ vs CodeGen
 
@@ -217,12 +221,13 @@ python scripts/train_codegen.py \
   --model Salesforce/codegen-350M-mono \
   --data datasets/java \
   --output model/checkpoints/run1-java-codegen \
-  --batch-size 12 \
-  --grad-accum 3 \
+  --batch-size 10 \
+  --grad-accum 4 \
   --lr 5e-5 \
   --epochs 5 \
   --max-length 1024 \
   --gradient-checkpointing \
+  --fp16 \
   --resume-from-checkpoint auto
 ```
 
