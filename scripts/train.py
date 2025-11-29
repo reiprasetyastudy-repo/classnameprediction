@@ -37,7 +37,12 @@ if torch.cuda.is_available():
 # Fix PyTorch 2.6 weights_only issue for checkpoint resume
 import numpy as np
 if hasattr(torch.serialization, 'add_safe_globals'):
-    torch.serialization.add_safe_globals([np.core.multiarray._reconstruct])
+    torch.serialization.add_safe_globals([
+        np.core.multiarray._reconstruct,
+        np.ndarray,
+        np.dtype,
+        np.random.RandomState,
+    ])
 
 from dataclasses import dataclass
 from typing import Dict, List

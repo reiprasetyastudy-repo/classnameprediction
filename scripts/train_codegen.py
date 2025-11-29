@@ -28,7 +28,12 @@ except ImportError:
 
 # Fix PyTorch 2.6 weights_only issue for checkpoint resume
 if hasattr(torch.serialization, 'add_safe_globals'):
-    torch.serialization.add_safe_globals([np.core.multiarray._reconstruct])
+    torch.serialization.add_safe_globals([
+        np.core.multiarray._reconstruct,
+        np.ndarray,
+        np.dtype,
+        np.random.RandomState,
+    ])
 
 # Bersihkan cache memori
 torch.cuda.empty_cache()
