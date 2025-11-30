@@ -122,110 +122,75 @@ These configurations are optimized for best performance, training time, and GPU 
 
 ### CodeT5+ Training
 
-**Java Dataset (275k samples):**
 ```bash
 # Set environment variable to reduce memory fragmentation
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
+# Java (275k samples)
 python scripts/train.py \
   --model Salesforce/codet5p-220m \
   --data datasets/java \
   --output model/checkpoints/run1-java \
-  --batch-size 10 \
-  --grad-accum 4 \
-  --lr 5e-5 \
-  --epochs 5 \
-  --fp16
-```
+  --batch-size 10 --grad-accum 4 --lr 5e-5 --epochs 5 --fp16
 
-**Python Dataset (155k samples):**
-```bash
+# Python (155k samples)
 python scripts/train.py \
   --model Salesforce/codet5p-220m \
   --data datasets/python \
   --output model/checkpoints/run1-python \
-  --batch-size 10 \
-  --grad-accum 4 \
-  --lr 5e-5 \
-  --epochs 5 \
-  --fp16
-```
+  --batch-size 10 --grad-accum 4 --lr 5e-5 --epochs 5 --fp16
 
-**Performance:**
-| Dataset | Batch | Grad Accum | Effective Batch | VRAM | Time | Accuracy |
-|---------|-------|------------|-----------------|------|------|----------|
-| Java | 10 | 4 | 40 | ~26GB | ~7h | ~85.7% |
-| Python | 10 | 4 | 40 | ~24GB | ~2.5h | ~85.5% |
-| C# | 10 | 4 | 40 | ~26GB | ~5h | TBD |
-
-**C# Dataset (226k samples):**
-```bash
+# C# (226k samples)
 python scripts/train.py \
   --model Salesforce/codet5p-220m \
   --data datasets/csharp \
   --output model/checkpoints/run1-csharp \
-  --batch-size 10 \
-  --grad-accum 4 \
-  --lr 5e-5 \
-  --epochs 5 \
-  --fp16
+  --batch-size 10 --grad-accum 4 --lr 5e-5 --epochs 5 --fp16
 ```
+
+**Performance:**
+| Dataset | Samples | Batch | Grad Accum | VRAM | Time | Accuracy |
+|---------|---------|-------|------------|------|------|----------|
+| Java | 275k | 10 | 4 | ~26GB | ~7h | ~85.7% |
+| Python | 155k | 10 | 4 | ~24GB | ~2.5h | ~85.5% |
+| C# | 226k | 10 | 4 | ~26GB | ~5h | TBD |
 
 ### CodeGen Training
 
-**Java Dataset:**
 ```bash
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
+# Java
 python scripts/train_codegen.py \
   --model Salesforce/codegen-350M-mono \
   --data datasets/java \
   --output model/checkpoints/run1-java-codegen \
-  --batch-size 10 \
-  --grad-accum 4 \
-  --lr 5e-5 \
-  --epochs 5 \
-  --max-length 1024 \
-  --gradient-checkpointing \
-  --fp16
-```
+  --batch-size 10 --grad-accum 4 --lr 5e-5 --epochs 5 \
+  --max-length 1024 --gradient-checkpointing --fp16
 
-**Python Dataset:**
-```bash
+# Python
 python scripts/train_codegen.py \
   --model Salesforce/codegen-350M-mono \
   --data datasets/python \
   --output model/checkpoints/run1-python-codegen \
-  --batch-size 10 \
-  --grad-accum 4 \
-  --lr 5e-5 \
-  --epochs 5 \
-  --max-length 1024 \
-  --gradient-checkpointing \
-  --fp16
-```
+  --batch-size 10 --grad-accum 4 --lr 5e-5 --epochs 5 \
+  --max-length 1024 --gradient-checkpointing --fp16
 
-**Performance:**
-| Dataset | Batch | Grad Accum | Effective Batch | Time | Notes |
-|---------|-------|------------|-----------------|------|-------|
-| Java | 10 | 4 | 40 | ~18-20h | Same params as CodeT5+ for fair comparison |
-| Python | 10 | 4 | 40 | ~10-12h | Same params as CodeT5+ for fair comparison |
-| C# | 10 | 4 | 40 | ~15-17h | Same params as CodeT5+ for fair comparison |
-
-**C# Dataset:**
-```bash
+# C#
 python scripts/train_codegen.py \
   --model Salesforce/codegen-350M-mono \
   --data datasets/csharp \
   --output model/checkpoints/run1-csharp-codegen \
-  --batch-size 10 \
-  --grad-accum 4 \
-  --lr 5e-5 \
-  --epochs 5 \
-  --max-length 1024 \
-  --gradient-checkpointing \
-  --fp16
+  --batch-size 10 --grad-accum 4 --lr 5e-5 --epochs 5 \
+  --max-length 1024 --gradient-checkpointing --fp16
 ```
+
+**Performance:**
+| Dataset | Samples | Batch | Grad Accum | Time | Notes |
+|---------|---------|-------|------------|------|-------|
+| Java | 275k | 10 | 4 | ~18-20h | Same params as CodeT5+ |
+| Python | 155k | 10 | 4 | ~10-12h | Same params as CodeT5+ |
+| C# | 226k | 10 | 4 | ~15-17h | Same params as CodeT5+ |
 
 ### Key Differences: CodeT5+ vs CodeGen
 
