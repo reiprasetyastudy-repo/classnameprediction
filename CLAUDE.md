@@ -41,6 +41,17 @@ python scripts/build_dataset.py \
   --languages java
 ```
 
+C# dataset (134 repositories):
+```bash
+python scripts/build_dataset.py \
+  --repos-file data/repos_csharp.txt \
+  --in data \
+  --out datasets \
+  --mask \
+  --min-lines 3 \
+  --languages csharp
+```
+
 Outputs: `datasets/<language>/{train,valid,test}.jsonl` with fields: `language`, `repo`, `path`, `class_span`, `source`, `target`.
 
 ### Train CodeT5+
@@ -70,6 +81,27 @@ python scripts/train_codegen.py \
 ```
 
 Use `--cpu` for CPU training, `--bf16` for Apple Silicon/MPS, `--fp16` for CUDA.
+
+### Train C# Models
+
+CodeT5+ for C#:
+```bash
+python scripts/train.py \
+  --model Salesforce/codet5p-220m \
+  --data datasets/csharp \
+  --output model/checkpoints/run1-csharp-codet5 \
+  --batch-size 10 --grad-accum 4 --lr 5e-5 --epochs 5 --fp16
+```
+
+CodeGen for C#:
+```bash
+python scripts/train_codegen.py \
+  --model Salesforce/codegen-350M-mono \
+  --data datasets/csharp \
+  --output model/checkpoints/run1-csharp-codegen \
+  --batch-size 10 --grad-accum 4 --lr 5e-5 --epochs 5 \
+  --max-length 1024 --gradient-checkpointing --fp16
+```
 
 ### Resume Training from Checkpoint
 Auto-detect latest checkpoint:
@@ -151,15 +183,23 @@ python scripts/upload_dataset_to_hf.py \
 
 Download on new instance (fast):
 ```bash
+# Java dataset
 python scripts/download_dataset_from_hf.py \
   --dataset-id reiprasetya-study/java-class-names \
   --output datasets/java
+
+# C# dataset
+python scripts/download_dataset_from_hf.py \
+  --dataset-id reiprasetya-study/csharp-class-names \
+  --output datasets/csharp
 ```
 
 Load directly in Python:
 ```python
 from datasets import load_dataset
 dataset = load_dataset("reiprasetya-study/java-class-names")
+# or
+dataset = load_dataset("reiprasetya-study/csharp-class-names")
 ```
 
 **Model Management:**
@@ -251,11 +291,18 @@ High-quality repository lists for building datasets:
   - Examples: Django, Flask, PyTorch, TensorFlow, pandas, NumPy, FastAPI, Streamlit, TheAlgorithms/Python, etc.
   - All projects follow PEP 8 naming conventions
   - Includes 150+ educational/algorithmic repos with simple, well-named classes (Circle, Stack, Queue, BubbleSort, etc.)
+- **C#**: `data/repos_csharp.txt` (134 repositories)
+  - Covers popular .NET projects: ASP.NET Core, EF Core, MAUI, Orleans, etc.
+  - Categories: web frameworks, ORM, testing (xUnit, NUnit, Moq), UI (Avalonia, MahApps), messaging (MassTransit, RabbitMQ), e-commerce (nopCommerce, Smartstore)
+  - Examples: Newtonsoft.Json, AutoMapper, Serilog, Polly, FluentValidation, MediatR, etc.
+  - All projects follow C# PascalCase naming conventions
+  - Excludes generated SDK code (Azure, AWS, Google Cloud) for quality naming patterns
 - All repositories are open source, well-maintained, and have good class naming patterns
 
 ### Language Support
 - Python: Regex-based class extraction (`class <Name>:`)
 - Java: Supports class, interface, enum keywords
+- C#: Supports class, interface, struct, enum, record keywords with access modifiers
 - Heuristic parsing only—no AST-based extraction
 
 ### Masking Behavior
