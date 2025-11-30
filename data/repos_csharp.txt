@@ -7,8 +7,6 @@ https://github.com/dotnet/machinelearning
 https://github.com/dotnet/BenchmarkDotNet
 https://github.com/dotnet/reactive
 https://github.com/dotnet/aspire
-https://github.com/dotnet/sdk
-https://github.com/dotnet/msbuild
 https://github.com/JamesNK/Newtonsoft.Json
 https://github.com/AutoMapper/AutoMapper
 https://github.com/MapsterMapper/Mapster
@@ -25,7 +23,6 @@ https://github.com/xunit/xunit
 https://github.com/nunit/nunit
 https://github.com/reactiveui/ReactiveUI
 https://github.com/StackExchange/StackExchange.Redis
-https://github.com/StackExchange/Dapper
 https://github.com/MassTransit/MassTransit
 https://github.com/abpframework/abp
 https://github.com/jasontaylordev/CleanArchitecture
@@ -72,7 +69,6 @@ https://github.com/RicoSuter/NSwag
 https://github.com/RicoSuter/NJsonSchema
 https://github.com/khellang/Scrutor
 https://github.com/jbogard/MediatR
-https://github.com/elastic/elasticsearch-net
 https://github.com/open-telemetry/opentelemetry-dotnet
 https://github.com/unoplatform/uno
 https://github.com/aspnetboilerplate/aspnetboilerplate
@@ -100,9 +96,7 @@ https://github.com/GtkSharp/GtkSharp
 https://github.com/cake-build/cake
 https://github.com/nuke-build/nuke
 https://github.com/scriban/scriban
-https://github.com/lunet-io/scriban
 https://github.com/atata-framework/atata
-https://github.com/LiquidTechnologies/LiquidTestReports
 https://github.com/Testably/Testably.Abstractions
 https://github.com/MaterialDesignInXAML/MaterialDesignInXamlToolkit
 https://github.com/dotnetcore/CAP
@@ -125,17 +119,11 @@ https://github.com/microsoft/PowerToys
 https://github.com/microsoft/FASTER
 https://github.com/microsoft/semantic-kernel
 https://github.com/microsoft/garnet
-https://github.com/Azure/azure-sdk-for-net
-https://github.com/aws/aws-sdk-net
-https://github.com/googleapis/google-cloud-dotnet
-https://github.com/OData/odata.net
 https://github.com/graphql-dotnet/graphql-dotnet
 https://github.com/ChilliCream/graphql-platform
 https://github.com/mysql-net/MySqlConnector
-https://github.com/StackExchange/StackExchange.Exceptional
 https://github.com/exceptionless/Exceptionless
 https://github.com/getsentry/sentry-dotnet
-https://github.com/App-vNext/Polly.Extensions.Http
 https://github.com/reactiveui/Akavache
 https://github.com/reactiveui/Fusillade
 https://github.com/IdentityModel/IdentityModel
