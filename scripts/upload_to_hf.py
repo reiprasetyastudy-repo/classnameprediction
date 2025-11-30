@@ -112,6 +112,20 @@ def upload_model_to_hub(
     # Step 3: Upload model files
     print("\n📤 Step 3/6: Uploading model files...")
 
+    # Check for model weights file (REQUIRED)
+    model_safetensors = ckpt_path / "model.safetensors"
+    model_pytorch = ckpt_path / "pytorch_model.bin"
+    
+    if not model_safetensors.exists() and not model_pytorch.exists():
+        print("❌ ERROR: No model weights found!")
+        print(f"   Expected: {model_safetensors}")
+        print(f"   Or: {model_pytorch}")
+        print("\n   Files in checkpoint directory:")
+        for f in sorted(ckpt_path.iterdir()):
+            size = f.stat().st_size / (1024*1024) if f.is_file() else 0
+            print(f"   - {f.name} ({size:.1f} MB)" if f.is_file() else f"   - {f.name}/")
+        return False
+    
     # Core model files to upload
     model_files = [
         "pytorch_model.bin",
@@ -126,9 +140,12 @@ def upload_model_to_hub(
     ]
 
     uploaded_count = 0
+    model_uploaded = False
     for filename in model_files:
         file_path = ckpt_path / filename
         if file_path.exists():
+            size_mb = file_path.stat().st_size / (1024*1024)
+            print(f"  📄 Uploading {filename} ({size_mb:.1f} MB)...")
             if upload_file_safe(
                 file_path=str(file_path),
                 repo_id=hub_model_id,
@@ -136,7 +153,14 @@ def upload_model_to_hub(
                 token=token
             ):
                 uploaded_count += 1
+                if filename in ["model.safetensors", "pytorch_model.bin"]:
+                    model_uploaded = True
+                    print(f"  ✅ Model weights uploaded: {filename}")
 
+    if not model_uploaded:
+        print("❌ ERROR: Model weights failed to upload!")
+        return False
+        
     print(f"  ✅ Uploaded {uploaded_count} model files")
     
     # Upload checkpoint folders (checkpoint-XXXX)
