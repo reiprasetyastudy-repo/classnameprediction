@@ -46,6 +46,13 @@ python scripts/download_dataset_from_hf.py \
   --output datasets/python
 ```
 
+**C# Dataset:**
+```bash
+python scripts/download_dataset_from_hf.py \
+  --dataset-id reiprasetya-study/csharp-class-names \
+  --output datasets/csharp
+```
+
 **Load directly in Python:**
 ```python
 from datasets import load_dataset
@@ -84,6 +91,17 @@ python scripts/build_dataset.py \
   --mask \
   --min-lines 3 \
   --languages java
+```
+
+**C# Dataset (134 repositories):**
+```bash
+python scripts/build_dataset.py \
+  --repos-file data/repos_csharp.txt \
+  --in data \
+  --out datasets \
+  --mask \
+  --min-lines 3 \
+  --languages csharp
 ```
 
 Outputs per language: `datasets/<language>/{train,valid,test}.jsonl` with fields `language, repo, path, class_span, source, target`.
@@ -138,6 +156,20 @@ python scripts/train.py \
 |---------|-------|------------|-----------------|------|------|----------|
 | Java | 10 | 4 | 40 | ~26GB | ~7h | ~85.7% |
 | Python | 10 | 4 | 40 | ~24GB | ~2.5h | ~85.5% |
+| C# | 10 | 4 | 40 | ~26GB | ~5h | TBD |
+
+**C# Dataset (226k samples):**
+```bash
+python scripts/train.py \
+  --model Salesforce/codet5p-220m \
+  --data datasets/csharp \
+  --output model/checkpoints/run1-csharp \
+  --batch-size 10 \
+  --grad-accum 4 \
+  --lr 5e-5 \
+  --epochs 5 \
+  --fp16
+```
 
 ### CodeGen Training
 
@@ -178,6 +210,22 @@ python scripts/train_codegen.py \
 |---------|-------|------------|-----------------|------|-------|
 | Java | 10 | 4 | 40 | ~18-20h | Same params as CodeT5+ for fair comparison |
 | Python | 10 | 4 | 40 | ~10-12h | Same params as CodeT5+ for fair comparison |
+| C# | 10 | 4 | 40 | ~15-17h | Same params as CodeT5+ for fair comparison |
+
+**C# Dataset:**
+```bash
+python scripts/train_codegen.py \
+  --model Salesforce/codegen-350M-mono \
+  --data datasets/csharp \
+  --output model/checkpoints/run1-csharp-codegen \
+  --batch-size 10 \
+  --grad-accum 4 \
+  --lr 5e-5 \
+  --epochs 5 \
+  --max-length 1024 \
+  --gradient-checkpointing \
+  --fp16
+```
 
 ### Key Differences: CodeT5+ vs CodeGen
 
@@ -398,7 +446,7 @@ The script argument `--cuda-device` should be set to 0 when using `CUDA_VISIBLE_
 
 ## Notes
 
-- Start with Python for best heuristic parsing; Java is supported with basic regex
+- Start with Python for best heuristic parsing; Java and C# are supported with regex
 - Use `--mask` to replace the declared class identifier with `____` to avoid label leakage
 - Consider rate limits and licenses when mining GitHub; export `GITHUB_TOKEN` for higher clone limits
 - Large files and artifacts are ignored via `.gitignore`
