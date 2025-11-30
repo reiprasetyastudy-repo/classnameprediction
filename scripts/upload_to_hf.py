@@ -76,12 +76,12 @@ def upload_model_to_hub(
     print(f"{'='*60}\n")
 
     # Step 1: Create repository
-    print("📦 Step 1/5: Creating repository...")
+    print("📦 Step 1/6: Creating repository...")
     if not create_repo_if_not_exists(hub_model_id, private=private, token=token):
         return False
 
     # Step 2: Generate README
-    print("\n📝 Step 2/5: Generating README...")
+    print("\n📝 Step 2/6: Generating README...")
     readme_path = ckpt_path / "README.md"
 
     # Auto-detect metrics file if not provided
@@ -110,7 +110,7 @@ def upload_model_to_hub(
     )
 
     # Step 3: Upload model files
-    print("\n📤 Step 3/5: Uploading model files...")
+    print("\n📤 Step 3/6: Uploading model files...")
 
     # Core model files to upload
     model_files = [
@@ -139,7 +139,7 @@ def upload_model_to_hub(
     print(f"  ✅ Uploaded {uploaded_count} model files")
 
     # Step 4: Upload README
-    print("\n📄 Step 4/5: Uploading README...")
+    print("\n📄 Step 4/6: Uploading README...")
     upload_file_safe(
         file_path=str(readme_path),
         repo_id=hub_model_id,
@@ -148,7 +148,7 @@ def upload_model_to_hub(
     )
 
     # Step 5: Upload logs and metrics
-    print("\n📊 Step 5/5: Uploading logs and metrics...")
+    print("\n📊 Step 5/6: Uploading logs and metrics...")
 
     # Upload training log
     training_log = ckpt_path / "training_log.csv"
@@ -200,6 +200,32 @@ def upload_model_to_hub(
                 path_in_repo="metrics/detailed_results.jsonl",
                 token=token
             )
+
+    # Step 6: Upload logs folder (codet5/codegen)
+    print("\n📋 Step 6/6: Uploading logs folder...")
+    
+    # Detect model type from checkpoint path or model_name
+    logs_dir = None
+    if "codegen" in checkpoint_path.lower() or "codegen" in model_name.lower():
+        logs_dir = Path("logs/codegen")
+    elif "codet5" in checkpoint_path.lower() or "codet5" in model_name.lower():
+        logs_dir = Path("logs/codet5")
+    
+    if logs_dir and logs_dir.exists():
+        # Upload all log files from the logs directory
+        log_files_uploaded = 0
+        for log_file in logs_dir.glob("*"):
+            if log_file.is_file():
+                if upload_file_safe(
+                    file_path=str(log_file),
+                    repo_id=hub_model_id,
+                    path_in_repo=f"logs/{log_file.name}",
+                    token=token
+                ):
+                    log_files_uploaded += 1
+        print(f"  ✅ Uploaded {log_files_uploaded} log files from {logs_dir}")
+    else:
+        print("  ⚠️  No logs folder found")
 
     # Success!
     repo_url = get_repo_url(hub_model_id)
