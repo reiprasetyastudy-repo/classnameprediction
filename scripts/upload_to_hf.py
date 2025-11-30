@@ -162,24 +162,6 @@ def upload_model_to_hub(
         return False
         
     print(f"  ✅ Uploaded {uploaded_count} model files")
-    
-    # Upload checkpoint folders (checkpoint-XXXX)
-    print("\n📂 Step 3b/6: Uploading checkpoint folders...")
-    checkpoint_folders = list(ckpt_path.glob("checkpoint-*"))
-    if checkpoint_folders:
-        for ckpt_folder in sorted(checkpoint_folders):
-            if ckpt_folder.is_dir():
-                print(f"  📁 Uploading {ckpt_folder.name}...")
-                if upload_folder_safe(
-                    folder_path=str(ckpt_folder),
-                    repo_id=hub_model_id,
-                    path_in_repo=f"checkpoints/{ckpt_folder.name}",
-                    token=token
-                ):
-                    print(f"  ✅ Uploaded {ckpt_folder.name}")
-        print(f"  ✅ Uploaded {len(checkpoint_folders)} checkpoint folders")
-    else:
-        print("  ⚠️  No checkpoint folders found")
 
     # Step 4: Upload README
     print("\n📄 Step 4/6: Uploading README...")

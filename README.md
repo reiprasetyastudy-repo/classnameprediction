@@ -356,6 +356,23 @@ python scripts/upload_to_hf.py \
   --private
 ```
 
+### Upload Checkpoints (Optional)
+
+Upload training checkpoints separately for resume on different machine:
+
+```bash
+# Upload checkpoint folder
+huggingface-cli upload reiprasetya-study/codegen-java-run1 \
+  model/checkpoints/run1-java-codegen/checkpoint-15000 \
+  checkpoints/checkpoint-15000 \
+  --repo-type model
+
+# Download checkpoint on new VM
+huggingface-cli download reiprasetya-study/codegen-java-run1 \
+  --include "checkpoints/*" \
+  --local-dir model/checkpoints/run1-java-codegen
+```
+
 ### View Results Without Downloading Model
 
 ```bash
