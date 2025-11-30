@@ -22,15 +22,18 @@ cp .env.example .env  # Add HF_TOKEN from https://huggingface.co/settings/tokens
 ```bash
 # Java
 python scripts/download_dataset_from_hf.py \
-  --dataset-id reiprasetya-study/java-class-names --output datasets/java
+  --dataset-id reiprasetya-study/java-class-names \
+  --output datasets/java
 
 # Python  
 python scripts/download_dataset_from_hf.py \
-  --dataset-id reiprasetya-study/python-class-names --output datasets/python
+  --dataset-id reiprasetya-study/python-class-names \
+  --output datasets/python
 
 # C#
 python scripts/download_dataset_from_hf.py \
-  --dataset-id reiprasetya-study/csharp-class-names --output datasets/csharp
+  --dataset-id reiprasetya-study/csharp-class-names \
+  --output datasets/csharp
 ```
 
 ### Build from GitHub (Optional)
@@ -38,15 +41,23 @@ python scripts/download_dataset_from_hf.py \
 ```bash
 # Python (450 repos)
 python scripts/build_dataset.py \
-  --repos-file data/repos_python.txt --in data --out datasets --mask --min-lines 3
+  --repos-file data/repos_python.txt \
+  --in data --out datasets \
+  --mask --min-lines 3
 
 # Java (99 repos)
 python scripts/build_dataset.py \
-  --repos-file data/repos_java.txt --in data --out datasets --mask --min-lines 3 --languages java
+  --repos-file data/repos_java.txt \
+  --in data --out datasets \
+  --mask --min-lines 3 \
+  --languages java
 
 # C# (134 repos)
 python scripts/build_dataset.py \
-  --repos-file data/repos_csharp.txt --in data --out datasets --mask --min-lines 3 --languages csharp
+  --repos-file data/repos_csharp.txt \
+  --in data --out datasets \
+  --mask --min-lines 3 \
+  --languages csharp
 ```
 
 
@@ -147,7 +158,9 @@ python scripts/train_codegen.py ... --batch-size 6 --grad-accum 8
 ```bash
 # CodeT5+
 python scripts/eval_gpu.py \
-  --ckpt model/checkpoints/run1-java-codet5 --data datasets/java --k 5
+  --ckpt model/checkpoints/run1-java-codet5 \
+  --data datasets/java \
+  --k 5
 
 # CodeGen
 python scripts/eval_codegen.py \
@@ -164,14 +177,22 @@ Output: `model/metrics/<run>/metrics.json` with exact match, top-k accuracy, Lev
 ```bash
 # CodeT5+
 python scripts/predict.py \
-  --ckpt model/checkpoints/run1-python-codet5 --language python --file path/to/MyClass.py --k 5
+  --ckpt model/checkpoints/run1-python-codet5 \
+  --language python \
+  --file path/to/MyClass.py \
+  --k 5
 
 # CodeGen
 python scripts/predict_codegen.py \
-  --ckpt model/checkpoints/run1-python-codegen --language python --file path/to/MyClass.py --k 5
+  --ckpt model/checkpoints/run1-python-codegen \
+  --language python \
+  --file path/to/MyClass.py \
+  --k 5
 
 # From stdin
-cat MyClass.java | python scripts/predict.py --ckpt model/checkpoints/run1-java-codet5 --language java
+cat MyClass.java | python scripts/predict.py \
+  --ckpt model/checkpoints/run1-java-codet5 \
+  --language java
 ```
 
 
@@ -183,22 +204,29 @@ python scripts/upload_to_hf.py \
   --ckpt model/checkpoints/run1-java-codet5 \
   --hub-model-id reiprasetya-study/codet5-java-run1 \
   --metrics model/metrics/run1-java-codet5/metrics.json \
-  --model-name CodeT5+ --language java
+  --model-name CodeT5+ \
+  --language java
 
 # Upload model.safetensors manually (if failed)
 huggingface-cli upload reiprasetya-study/codet5-java-run1 \
-  model/checkpoints/run1-java-codet5/model.safetensors model.safetensors --repo-type model
+  model/checkpoints/run1-java-codet5/model.safetensors \
+  model.safetensors \
+  --repo-type model
 
 # Upload checkpoints (optional, for resume on different machine)
 huggingface-cli upload reiprasetya-study/codet5-java-run1 \
-  model/checkpoints/run1-java-codet5/checkpoint-34495 checkpoints/checkpoint-34495 --repo-type model
+  model/checkpoints/run1-java-codet5/checkpoint-34495 \
+  checkpoints/checkpoint-34495 \
+  --repo-type model
 
 # Download checkpoints
 huggingface-cli download reiprasetya-study/codet5-java-run1 \
-  --include "checkpoints/*" --local-dir model/checkpoints/run1-java-codet5
+  --include "checkpoints/*" \
+  --local-dir model/checkpoints/run1-java-codet5
 
 # View results without downloading
-python scripts/view_hf_results.py --hub-model-id reiprasetya-study/codet5-java-run1
+python scripts/view_hf_results.py \
+  --hub-model-id reiprasetya-study/codet5-java-run1
 ```
 
 
