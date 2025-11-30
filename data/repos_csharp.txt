@@ -14,7 +14,6 @@ https://github.com/DapperLib/Dapper
 https://github.com/serilog/serilog
 https://github.com/App-vNext/Polly
 https://github.com/FluentValidation/FluentValidation
-https://github.com/MediatR/MediatR
 https://github.com/moq/moq4
 https://github.com/xunit/xunit
 https://github.com/nunit/nunit
@@ -44,17 +43,8 @@ https://github.com/fluentassertions/fluentassertions
 https://github.com/AutoFixture/AutoFixture
 https://github.com/NSubstitute/NSubstitute
 https://github.com/NLog/NLog
-https://github.com/prometheus-net/prometheus-net
 https://github.com/Humanizr/Humanizer
 https://github.com/JoshClose/CsvHelper
-https://github.com/MessagePack-CSharp/MessagePack-CSharp
-https://github.com/protobuf-net/protobuf-net
 https://github.com/SixLabors/ImageSharp
-https://github.com/cake-build/cake
-https://github.com/nuke-build/nuke
-https://github.com/gitextensions/gitextensions
-https://github.com/MudBlazor/MudBlazor
 https://github.com/dotnet/BenchmarkDotNet
 https://github.com/spectreconsole/spectre.console
-https://github.com/bitwarden/server
-https://github.com/jellyfin/jellyfin
