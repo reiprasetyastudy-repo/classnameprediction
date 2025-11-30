@@ -39,6 +39,13 @@ from logger_utils import setup_logger, log_section, log_config
 
 PY_CLASS_RE = re.compile(r"^class\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(?", re.MULTILINE)
 JAVA_CLASS_RE = re.compile(r"\b(class|interface|enum)\s+([A-Za-z_][A-Za-z0-9_]*)\b")
+# C# pattern: supports class, interface, struct, enum, record with access modifiers
+CSHARP_CLASS_RE = re.compile(
+    r"\b(?:public|private|internal|protected)?\s*"
+    r"(?:static|sealed|abstract|partial)?\s*"
+    r"(class|interface|struct|enum|record)\s+"
+    r"([A-Za-z_][A-Za-z0-9_]*)\b"
+)
 
 
 def safe_repo_dir(url: str) -> str:
@@ -109,6 +116,20 @@ def extract_java_classes(src: str) -> List[Tuple[str, Tuple[int, int]]]:
     return spans
 
 
+def extract_csharp_classes(src: str) -> List[Tuple[str, Tuple[int, int]]]:
+    # Find class/interface/struct/enum/record declaration and capture until next declaration or EOF
+    candidates = []
+    for m in CSHARP_CLASS_RE.finditer(src):
+        cls_kw, name = m.group(1), m.group(2)
+        start = m.start()
+        candidates.append((name, (start, -1)))
+    spans = []
+    for i, (name, (start, _)) in enumerate(candidates):
+        end = candidates[i + 1][1][0] if i + 1 < len(candidates) else len(src)
+        spans.append((name, (start, end)))
+    return spans
+
+
 def normalize_source(s: str) -> str:
     return re.sub(r"\s+", " ", s.strip())
 
@@ -118,6 +139,8 @@ def build_examples(repo: str, path: Path, language: str, src: str, mask: bool, m
         spans = extract_python_classes(src)
     elif language == 'java':
         spans = extract_java_classes(src)
+    elif language == 'csharp':
+        spans = extract_csharp_classes(src)
     else:
         return []
     examples = []
@@ -132,6 +155,8 @@ def build_examples(repo: str, path: Path, language: str, src: str, mask: bool, m
                 masked = re.sub(rf"(class\s+){re.escape(name)}(\s*\(?)", r"\1____\2", masked, count=1)
             elif language == 'java':
                 masked = re.sub(rf"(\b(class|interface|enum)\s+){re.escape(name)}\b", r"\1____", masked, count=1)
+            elif language == 'csharp':
+                masked = re.sub(rf"(\b(class|interface|struct|enum|record)\s+){re.escape(name)}\b", r"\1____", masked, count=1)
         examples.append({
             'language': language,
             'repo': repo,
@@ -224,6 +249,8 @@ def main():
                 exts = ('.py',)
             elif lang == 'java':
                 exts = ('.java',)
+            elif lang == 'csharp':
+                exts = ('.cs',)
             else:
                 continue
 

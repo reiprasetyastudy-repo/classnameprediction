@@ -1,0 +1,174 @@
+# C# Repositories for Class Name Prediction Dataset
+# Curated list of high-quality, well-maintained C# projects
+# Total: ~100 repositories
+
+# ============================================================
+# .NET Core / ASP.NET Framework
+# ============================================================
+https://github.com/dotnet/aspnetcore
+https://github.com/dotnet/runtime
+https://github.com/dotnet/efcore
+https://github.com/dotnet/roslyn
+https://github.com/dotnet/maui
+https://github.com/dotnet/wpf
+https://github.com/dotnet/winforms
+https://github.com/dotnet/orleans
+https://github.com/dotnet/extensions
+https://github.com/dotnet/sdk
+
+# ============================================================
+# Popular Libraries & Tools
+# ============================================================
+https://github.com/JamesNK/Newtonsoft.Json
+https://github.com/AutoMapper/AutoMapper
+https://github.com/DapperLib/Dapper
+https://github.com/serilog/serilog
+https://github.com/App-vNext/Polly
+https://github.com/FluentValidation/FluentValidation
+https://github.com/MediatR/MediatR
+https://github.com/moq/moq4
+https://github.com/xunit/xunit
+https://github.com/nunit/nunit
+https://github.com/bchavez/Bogus
+https://github.com/reactiveui/ReactiveUI
+https://github.com/reactiveui/refit
+https://github.com/StackExchange/StackExchange.Redis
+https://github.com/MassTransit/MassTransit
+
+# ============================================================
+# Web Frameworks & APIs
+# ============================================================
+https://github.com/abpframework/abp
+https://github.com/dotnet-architecture/eShopOnContainers
+https://github.com/jasontaylordev/CleanArchitecture
+https://github.com/ardalis/CleanArchitecture
+https://github.com/dotnet-architecture/eShopOnWeb
+https://github.com/IdentityServer/IdentityServer4
+https://github.com/openiddict/openiddict-core
+https://github.com/HangfireIO/Hangfire
+https://github.com/quartz-scheduler/quartz
+https://github.com/OData/WebApi
+
+# ============================================================
+# Desktop Applications
+# ============================================================
+https://github.com/AvaloniaUI/Avalonia
+https://github.com/MaterialDesignInXAML/MaterialDesignInXamlToolkit
+https://github.com/MahApps/MahApps.Metro
+https://github.com/Kinnara/ModernWpf
+https://github.com/hardcodet/wpf-notifyicon
+https://github.com/icsharpcode/ILSpy
+https://github.com/icsharpcode/SharpZipLib
+https://github.com/icsharpcode/AvalonEdit
+https://github.com/files-community/Files
+https://github.com/ShareX/ShareX
+
+# ============================================================
+# Game Development
+# ============================================================
+https://github.com/MonoGame/MonoGame
+https://github.com/stride3d/stride
+https://github.com/FNA-XNA/FNA
+https://github.com/prime31/Nez
+https://github.com/RonenNess/GeonBit
+https://github.com/craftworkgames/MonoGame.Extended
+
+# ============================================================
+# Database & ORM
+# ============================================================
+https://github.com/dotnet/efcore
+https://github.com/linq2db/linq2db
+https://github.com/npgsql/npgsql
+https://github.com/mysql-net/MySqlConnector
+https://github.com/mongodb/mongo-csharp-driver
+https://github.com/StackExchange/Dapper
+https://github.com/borisdj/EFCore.BulkExtensions
+https://github.com/dotnet/EntityFramework.Docs
+
+# ============================================================
+# Networking & Communication
+# ============================================================
+https://github.com/grpc/grpc-dotnet
+https://github.com/SignalR/SignalR
+https://github.com/dotnetcore/CAP
+https://github.com/rabbitmq/rabbitmq-dotnet-client
+https://github.com/Azure/azure-sdk-for-net
+https://github.com/restsharp/RestSharp
+https://github.com/tmenier/Flurl
+
+# ============================================================
+# Testing & Mocking
+# ============================================================
+https://github.com/fluentassertions/fluentassertions
+https://github.com/shouldly/shouldly
+https://github.com/AutoFixture/AutoFixture
+https://github.com/SpecFlowOSS/SpecFlow
+https://github.com/FakeItEasy/FakeItEasy
+https://github.com/NSubstitute/NSubstitute
+https://github.com/coverlet-coverage/coverlet
+
+# ============================================================
+# Logging & Monitoring
+# ============================================================
+https://github.com/NLog/NLog
+https://github.com/apache/logging-log4net
+https://github.com/exceptionless/Exceptionless
+https://github.com/elmahio/Elmah.Io.Client
+https://github.com/App-Metrics/AppMetrics
+https://github.com/prometheus-net/prometheus-net
+
+# ============================================================
+# Security & Authentication
+# ============================================================
+https://github.com/AzureAD/microsoft-authentication-library-for-dotnet
+https://github.com/dotnet/aspnetcore/tree/main/src/Security
+https://github.com/KevinDockx/HttpCacheHeaders
+https://github.com/scottksmith95/LINQKit
+
+# ============================================================
+# Utilities & Helpers
+# ============================================================
+https://github.com/Humanizr/Humanizer
+https://github.com/jehugaleahsa/mustern
+https://github.com/JoshClose/CsvHelper
+https://github.com/eiriktsarpalis/TypeShape
+https://github.com/mcintyre321/OneOf
+https://github.com/louthy/language-ext
+https://github.com/neuecc/Utf8Json
+https://github.com/MessagePack-CSharp/MessagePack-CSharp
+https://github.com/protobuf-net/protobuf-net
+
+# ============================================================
+# Image & Graphics
+# ============================================================
+https://github.com/SixLabors/ImageSharp
+https://github.com/SkiaSharp/SkiaSharp
+https://github.com/JimBobSquarePants/ImageProcessor
+https://github.com/drewnoakes/metadata-extractor-dotnet
+
+# ============================================================
+# Machine Learning & AI
+# ============================================================
+https://github.com/dotnet/machinelearning
+https://github.com/SciSharp/TensorFlow.NET
+https://github.com/SciSharp/NumSharp
+https://github.com/accord-net/framework
+
+# ============================================================
+# DevOps & CI/CD Tools
+# ============================================================
+https://github.com/OctopusDeploy/OctopusDSC
+https://github.com/cake-build/cake
+https://github.com/nuke-build/nuke
+https://github.com/gitextensions/gitextensions
+https://github.com/GitTools/GitVersion
+
+# ============================================================
+# Blazor & Web UI
+# ============================================================
+https://github.com/AdrienTorris/awesome-blazor
+https://github.com/AntDesign/ant-design-blazor
+https://github.com/MudBlazor/MudBlazor
+https://github.com/Blazored/LocalStorage
+https://github.com/Blazored/Modal
+https://github.com/bUnit-dev/bUnit
