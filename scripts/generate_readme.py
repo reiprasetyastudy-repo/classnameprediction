@@ -19,7 +19,7 @@ def generate_readme(
 
     # Load metrics if exists
     metrics = {}
-    if Path(metrics_file).exists():
+    if metrics_file and Path(metrics_file).exists():
         with open(metrics_file) as f:
             metrics = json.load(f)
 
